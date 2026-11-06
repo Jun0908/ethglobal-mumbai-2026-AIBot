@@ -2,7 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { idSchema } from "../schemas";
-import { appendConversation, conversationSummary, createConversation, dimensionIds, feelingSchema, MAX_CONVERSATION_TURNS, publicConversation, type Conversation } from "../conversation";
+import { appendConversation, conversationSummary, createConversation, dimensionIds, feelingSchema, MAX_CONVERSATION_TURNS, publicConversation, switchSuggestionLanguage, type Conversation } from "../conversation";
 import { chooseStory, rainStory, storyText } from "../rain-story";
 import type { Locale } from "../i18n";
 import { ApiError, locked } from "./security";
@@ -35,7 +35,7 @@ export async function dispatchConversation(path: string, body: unknown, person: 
     const input = z.object({ matchId: idSchema, agentPersonaId: idSchema, fresh: z.boolean().default(false) }).strict().parse(body);
     return locked(`conversation-start:${person.ownerId}`, async () => {
       const previous = [...state.conversations.values()].filter(c => c.ownerId === person.ownerId && c.partnerRef === input.agentPersonaId && c.matchId === input.matchId && c.expiresAt > Date.now()).sort((a, b) => b.updatedAt - a.updatedAt)[0];
-      if (previous && !input.fresh) { await authorize(previous, person, locale); touch(previous, person); return publicConversation(previous); }
+      if (previous && !input.fresh) { await authorize(previous, person, locale); touch(previous, person); switchSuggestionLanguage(previous, locale); return publicConversation(previous); }
       if ([...state.conversations.values()].filter(c => c.ownerId === person.ownerId).length >= 20) return fail(locale, 429, "会話が20件あります。今ある会話の続きを楽しんでください。", "You have 20 conversations. Please continue an existing one.");
       let personaId = input.agentPersonaId;
       const demo = isDemo() && ["demo-calm", "demo-playful"].includes(personaId);
@@ -47,7 +47,7 @@ export async function dispatchConversation(path: string, body: unknown, person: 
       const capsule = await loadCapsule(personaId).catch(() => fail(locale, 404, "相手のAIを利用できません。", "This AI is unavailable."));
       if (!capsule.consent.simulationApproved || (isDemo() && capsule.ownerId !== person.ownerId)) return fail(locale, 403, "相手の利用同意を確認できません。", "Could not verify consent for this companion.");
       await verifyMatch(person, input.matchId, personaId);
-      const c = createConversation({ id: randomUUID(), ownerId: person.ownerId, personaId, personaVersion: capsule.version, matchId: input.matchId, partnerRef: input.agentPersonaId, partnerName: demo ? input.agentPersonaId === "demo-calm" ? "Asha" : "Mira" : "Your match" }, locale, Math.min(person.expiresAt, Date.now() + 2 * 60 * 60_000));
+      const c = createConversation({ id: randomUUID(), ownerId: person.ownerId, personaId, personaVersion: capsule.version, matchId: input.matchId, partnerRef: input.agentPersonaId, partnerKey: previous?.partnerKey, partnerName: demo ? input.agentPersonaId === "demo-calm" ? "Asha" : "Mira" : "Your match" }, locale, Math.min(person.expiresAt, Date.now() + 2 * 60 * 60_000));
       state.conversations.set(c.id, c);
       return publicConversation(c);
     });
@@ -64,7 +64,7 @@ export async function dispatchConversation(path: string, body: unknown, person: 
   }
   if (path === "dialogue/get") {
     const { gameId } = idBody.strict().parse(body);
-    const c = owned(gameId, person, locale); await authorize(c, person, locale); touch(c, person);
+    const c = owned(gameId, person, locale); await authorize(c, person, locale); touch(c, person); switchSuggestionLanguage(c, locale);
     return publicConversation(c);
   }
   if (path === "dialogue/reflection") {

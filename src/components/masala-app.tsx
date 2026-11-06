@@ -1,8 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import type { Message } from "@/lib/game";
-import type { RainStory } from "@/lib/rain-story";
-import RainGame from "./rain-game";
+import ConversationExperience, { type ConversationTarget } from "./conversation-experience";
 import { interviewQuestions, scenarios, type Answer, type Dialogue, type PersonaContent } from "@/lib/schemas";
 import { readLocale, translate, type Locale } from "@/lib/i18n";
 import { INTERVIEW_LIMIT, interviewOptions, interviewProgress, type InterviewNext } from "@/lib/interview";
@@ -14,16 +12,6 @@ type Config = {
 type Draft = {
     draftId: string;
     content: PersonaContent;
-};
-type PublicGame = {
-    story?: RainStory;
-    id: string;
-    scene: number;
-    sceneTurns: number;
-    completed: boolean;
-    messages: Message[];
-    emotion: Dialogue["emotion"];
-    event: Dialogue["conversationEvent"];
 };
 type View = "home" | "interview" | "calibrate" | "approved" | "game";
 const labels: Record<string, string> = { socialStyle: "会話のスタイル", humor: "ユーモア", values: "大切にすること", relationshipPace: "関係のペース", tone: "話し方", sentenceLength: "文章の長さ", asksFollowUpQuestions: "自然に質問する", handlesSilence: "沈黙への対応", initialReaction: "意見が違ったとき", repairStyle: "すれ違いの解き方" };
@@ -80,8 +68,7 @@ export default function MasalaApp() {
     const [finalConsent, setFinalConsent] = useState(false);
     const [personaId, setPersonaId] = useState("");
     const [personaIds, setPersonaIds] = useState<string[]>([]);
-    const [game, setGame] = useState<PublicGame | null>(null);
-    const [partner, setPartner] = useState("Asha");
+    const [conversationTarget, setConversationTarget] = useState<ConversationTarget | null>(null);
     const [dateResult, setDateResult] = useState("");
     const [matchId, setMatchId] = useState("");
     const [matchPersonaId, setMatchPersonaId] = useState("");
@@ -153,16 +140,15 @@ export default function MasalaApp() {
         setFinalConsent(false);
     }
     function startInterview() { void run(async () => { await session(); resetInterview(); setView("interview"); }); }
-    function startGame(target: string, name: string) {
+    function startGame(target: string, _name: string) {
         void run(async () => {
             await session();
-            const next = await post<PublicGame>("game/start", { matchId: config?.demoMode ? "demo-match" : matchId, agentPersonaId: target, mode: "rain" });
-            setGame(next);
-            setPartner(name);
+            setConversationTarget({ id: target, matchId: config?.demoMode ? "demo-match" : matchId });
             setDateResult("");
             setView("game");
         });
     }
+    function openCompanions() { void run(async () => { await session(); setConversationTarget(null); setView("game"); }); }
     async function answerQuestion(value = answer) {
         if (!value.trim() || interview.finished)
             return;
@@ -234,31 +220,16 @@ export default function MasalaApp() {
                 const remaining = personaIds.filter(id => id !== personaId);
                 setPersonaIds(remaining);
                 setPersonaId(remaining[0] || "");
-                setGame(null);
+                setConversationTarget(null);
                 setView("home");
                 setDateResult(t("利用同意を撤回しました。このPersonaを使った以後の会話は停止されます。"));
             });
-    }
-    async function sendStoryMessage(message: string) {
-        if (!game || !message.trim()) return false;
-        return run(async () => {
-            const result = await post<{ game: PublicGame; reply: Dialogue }>("game/message", { gameId: game.id, message });
-            setGame(result.game);
-        });
-    }
-    function chooseAction(choiceId: string) {
-        if (!game?.story) return;
-        const current = game;
-        void run(async () => {
-            const result = await post<{ game: PublicGame; reply: Dialogue }>("game/action", { gameId: current.id, choiceId, revision: current.story!.revision });
-            setGame(result.game);
-        });
     }
     const provider = !config ? t("読み込み中") : config.llmMode === "openai" ? "OpenAI API" : t("ローカルの定型応答（LLM未使用）");
     return <div className="app-frame">
     <header className="site-header l--flex -ai:center -jc:between">
       <button className="brand" aria-label={t("ホームに戻る")} disabled={busy} onClick={() => { setView("home"); setError(""); }}><Cup /><span>love match<b>MASALA<span className="brand-dot">✳</span></b></span></button>
-      <nav className="header-nav l--cluster -g:20" aria-label={t("メインナビゲーション")}><button className={view === "game" || view === "home" ? "nav-active" : ""} disabled={busy} onClick={() => setView(game ? "game" : "home")}>{t("デートを体験")}</button><button disabled={busy || !adult} onClick={startInterview}>{t("自分のAIをつくる")}</button><button onClick={() => setPrivacy(true)}>{t("プライバシー")}<span>↗</span></button></nav>
+      <nav className="header-nav l--cluster -g:20" aria-label={t("メインナビゲーション")}><button className={view === "game" || view === "home" ? "nav-active" : ""} disabled={busy || !adult} onClick={openCompanions}>{t("デートを体験")}</button><button disabled={busy || !adult} onClick={startInterview}>{t("自分のAIをつくる")}</button><button onClick={() => setPrivacy(true)}>{t("プライバシー")}<span>↗</span></button></nav>
       <div className="header-tools"><span className="header-note"><i /> MADE WITH CHAI & CURIOSITY</span><div className="language-switch" role="group" aria-label="Language / 言語"><button type="button" lang="ja" aria-label="日本語" aria-pressed={locale === "ja"} disabled={busy} onClick={() => changeLocale("ja")}>JP</button><button type="button" lang="en" aria-label="English" aria-pressed={locale === "en"} disabled={busy} onClick={() => changeLocale("en")}>EN</button></div></div>
     </header>
     <main>
@@ -269,9 +240,9 @@ export default function MasalaApp() {
             <span className="location"><span>✳</span> MUMBAI, INDIA <span className="location-line"/> A NEW KIND OF MEET-CUTE</span>
             <h1>A little chai.<br />A little<br /><em>chemistry.</em></h1>
             <p className="hero-jp">{t("あなたらしさから、はじまる会話。")}</p>
-            <p className="hero-description">{t("突然の雨で、デートの予定が変わった。3つの行動を選び、相手の反応を見ながら、ふたりだけの物語をつくろう。")}</p><p className="small">{t("すぐ遊ぶなら「雨の日のデートを遊ぶ」へ。自分のAIの作成は任意です。")}</p>
+            <p className="hero-description">{t("自分らしく話して、また話したい相手を見つけよう。共通点も違いも、実際の会話から振り返れます。")}</p><p className="small">{t("相手を選ぶだけで始められます。自分のAIの作成は任意です。")}</p>
             <label className="check adult-check"><input type="checkbox" checked={adult} onChange={e => setAdult(e.target.checked)}/>{t("私は18歳以上で、AIとのシミュレーションであることを理解しています。")}</label>
-            <div className="hero-actions l--cluster -g:15"><button className="button primary" disabled={busy || !adult || !config || !config.demoMode} onClick={() => startGame("demo-calm", "Asha")}>{t("雨の日のデートを遊ぶ")}<span>↗</span></button><button className="button text-button" disabled={busy || !adult || !config} onClick={startInterview}>{t("自分のAIをつくる")}<span>→</span></button></div>
+            <div className="hero-actions l--cluster -g:15"><button className="button primary" disabled={busy || !adult || !config || !config.demoMode} onClick={openCompanions}>{t("相手を選ぶ・会話を再開")}<span>↗</span></button><button className="button text-button" disabled={busy || !adult || !config} onClick={startInterview}>{t("自分のAIをつくる")}<span>→</span></button></div>
             <p className="trust-note"><span>♧</span>{t("本人の承認から生まれるAI。秘密は、あなたのもの。")}</p>
           </div>
           <div className="hero-art"><img src="/chai-date.png" alt={t("ムンバイのカフェでチャイを手にする成人のオリジナルアニメキャラクター")}/><span className="art-corner">THE FIRST CHAI DATE</span><div className="art-caption"><span className="sun-mark">✺</span><div><p>Some connections<br />start with a conversation.</p><span>{t("ひとつの会話が、きっかけになる。")}</span></div></div><span className="art-stamp">LET IT<br /><b>brew.</b><span>♡</span></span></div>
@@ -314,10 +285,10 @@ export default function MasalaApp() {
 
       {view === "approved" && <section className="success-page l--stack -g:20"><span className="success-mark">♡</span><p className="eyebrow">APPROVED BY YOU</p><h2>{t("あなたらしさに、")}<br /><em>{t("ひとさじのスパイス。")}</em></h2><p>{t("Personaを暗号化して保存しました。")}<br />{t("承認した会話の傾向だけを、シミュレーションに使います。")}</p><div className="l--cluster -g:15">{config?.demoMode && <button className="button primary" disabled={busy} onClick={() => startGame(personaId, "Your AI")}>{t("自分のAIと話してみる →")}</button>}<button className="button secondary" onClick={() => setView("home")}>{t("ホームへ")}</button></div><button className="link-button danger" disabled={busy} onClick={revoke}>{t("利用同意を撤回する")}</button></section>}
 
-      {view === "game" && game && <RainGame game={game} locale={locale} partner={partner} busy={busy} demo={!!config?.demoMode} dateResult={dateResult} onAction={chooseAction} onChat={sendStoryMessage} onHome={() => setView("home")} onRetry={() => void run(async () => { setGame(await post<PublicGame>("game/retry", { gameId: game.id })); setDateResult(""); })} onDate={() => void run(async () => { const result = await post<{ message: string }>("date-request", { gameId: game.id }); setDateResult(result.message); })}/>}
+      {view === "game" && <ConversationExperience key={conversationTarget?.id || "companions"} locale={locale} demo={!!config?.demoMode} initialTarget={conversationTarget} onHome={() => setView("home")} onBusyChange={setBusy}/>}
 
     </main>
     <footer className="site-footer"><p><span>✳</span> LOVE MATCH MASALA <small>JAPAN MEETS INDIA. YOU MEET POSSIBILITY.</small></p><span>Made for meaningful conversations.</span><button className="link-button" onClick={() => setPrivacy(true)}>Your privacy, always. ↗</button></footer>
-    <dialog className="privacy-dialog" ref={dialogRef} onCancel={() => setPrivacy(false)} onClose={() => setPrivacy(false)}><div className="l--stack -g:20"><div className="l--flex -jc:between -ai:center"><p className="eyebrow">YOUR PRIVACY, ALWAYS</p><button className="round-button" aria-label={t("プライバシー説明を閉じる")} onClick={() => setPrivacy(false)}>×</button></div><h2>{t("秘密は、")}<em>{t("あなたのもの。")}</em></h2><p>{t("回答・フィードバックは入力欄で編集し、送信ボタンで送れます。送信した回答、Persona、会話例、フィードバックをAIが処理します。完成したPersonaの利用には最終承認が必要です。")}</p><p>{t("現在の処理先：")}<strong>{provider}</strong>{t("。OpenAI利用時、送信した内容は同社が処理します。ゲームの発言も会話の生成に送信されます。")}</p><p>{t("生の回答全文は永続保存しません。承認済みPersonaはAES-256-GCMで保存時に暗号化します。推論時の内容をLLM事業者から隠す仕組みではありません。")}</p><p>{t("プレイヤーにPersonaのJSONや本人の生プロフィールを送信しません。ただし、繰り返しの会話から特徴が推測される可能性はあります。")}</p><p>{t("利用同意は承認後の画面から撤回できます。双方の承認前に連絡先を公開しません。")}</p><p className="small muted">{t("このMVPのデモはブラウザーのセッションを本人操作の識別に使います。ブラウザーを変えたりセッションが切れると、デモで作ったPersonaの操作を継続できない場合があります。架空の回答で試してください。")}</p><button className="button primary" onClick={() => setPrivacy(false)}>{t("確認しました")}</button></div></dialog>
+    <dialog className="privacy-dialog" ref={dialogRef} onCancel={() => setPrivacy(false)} onClose={() => setPrivacy(false)}><div className="l--stack -g:20"><div className="l--flex -jc:between -ai:center"><p className="eyebrow">YOUR PRIVACY, ALWAYS</p><button className="round-button" aria-label={t("プライバシー説明を閉じる")} onClick={() => setPrivacy(false)}>×</button></div><h2>{t("秘密は、")}<em>{t("あなたのもの。")}</em></h2><p>{t("回答・フィードバックは入力欄で編集し、送信ボタンで送れます。送信した回答、Persona、会話例、フィードバックをAIが処理します。完成したPersonaの利用には最終承認が必要です。")}</p><p>{t("現在の処理先：")}<strong>{provider}</strong>{t("。OpenAI利用時、送信した内容は同社が処理します。ゲームの発言は会話の生成と、選択したときの相性の振り返りに使用します。")}</p><p>{t("生の回答全文は永続保存しません。承認済みPersonaはAES-256-GCMで保存時に暗号化します。推論時の内容をLLM事業者から隠す仕組みではありません。")}</p><p>{t("プレイヤーにPersonaのJSONや本人の生プロフィールを送信しません。ただし、繰り返しの会話から特徴が推測される可能性はあります。")}</p><p>{t("利用同意は承認後の画面から撤回できます。双方の承認前に連絡先を公開しません。")}</p><p className="small muted">{t("このMVPのデモはブラウザーのセッションを本人操作の識別に使います。ブラウザーを変えたりセッションが切れると、デモで作ったPersonaの操作を継続できない場合があります。架空の回答で試してください。")}</p><button className="button primary" onClick={() => setPrivacy(false)}>{t("確認しました")}</button></div></dialog>
   </div>;
 }

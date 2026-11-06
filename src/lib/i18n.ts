@@ -2,6 +2,10 @@ export type Locale = "ja" | "en";
 export function readLocale(value: string | null | undefined): Locale { return value === "en" ? "en" : "ja"; }
 
 export const english: Record<string, string> = {
+  "。OpenAI利用時、送信した内容は同社が処理します。ゲームの発言は会話の生成と、選択したときの相性の振り返りに使用します。": ". When OpenAI is selected, it processes submitted content to generate conversation and, when you choose, a reflection on your conversation.",
+  "自分らしく話して、また話したい相手を見つけよう。共通点も違いも、実際の会話から振り返れます。": "Be yourself in conversation and discover who you want to talk to again. Explore shared preferences and differences through your actual exchanges.",
+  "相手を選ぶだけで始められます。自分のAIの作成は任意です。": "Choose a companion to begin. Creating your own AI is optional.",
+  "相手を選ぶ・会話を再開": "Choose a companion · resume",
   "雨が降って、少し立ち止まる時間ができたね。": "The rain gives us a moment to pause.",
   "私はゆっくり過ごすのが好き。こうして落ち着ける時間があるとうれしいな。": "I enjoy taking things slowly. A quiet moment together feels good to me.",
   "予定外の展開って楽しいね！ 新しい発見があるとわくわくする。": "An unexpected turn makes this more fun! I love discovering something new.",
