@@ -26,6 +26,7 @@ Implementation is in progress. Completed checks are recorded in the commits and 
 - `scripts/check-flow.mjs`: API flow checks using fictional adult inputs; actual scripted-mode flow passed.
 - `src/components/masala-app.tsx` and `src/app/globals.css`: Codex-assisted responsive interview, calibration and dating interface; browser checks used fictional adult inputs.
 - `public/chai-date.png`: generated with OpenAI image generation, depicting an original fictional adult Indian character aged 27 in a Mumbai cafe. Shared illustration used for both fictional demo personas with CSS emotion effects; no actual person is depicted.
+- `scripts/check-live.mjs`, `scripts/check-security.mjs`, `scripts/check-artifacts.mjs`: live-provider, invalid-input/rate-limit and build-artifact checks.
 
 ## Direction artifacts
 
@@ -38,3 +39,5 @@ Implementation is in progress. Completed checks are recorded in the commits and 
 Initial documentation was checked with Git diff and whitespace checks. Implementation validation is recorded as it is performed; automated checks are AI-run unless explicitly attributed to a human.
 
 Update this file alongside implementation to identify AI-assisted modules and assets, human architecture and product decisions, reviews, integration work, and checks actually performed. Do not describe planned human reviews as completed reviews.
+
+2026-11-06 validation: TypeScript and production build passed; five unit tests, the scripted-demo API flow, negative API checks and secret-artifact checks passed. Browser testing covered the interview/calibration/approval/chat flow and a 390px layout. OpenAI rejected the configured credential with 401 invalid_api_key; no successful live LLM response is claimed. The user deferred credential correction. External PSI integration and actual date delivery have not been tested. No human code review or human UI acceptance is claimed.
