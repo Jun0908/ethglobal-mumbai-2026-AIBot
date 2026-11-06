@@ -51,7 +51,10 @@ const japanese: Record<string, string> = {
   "A sudden rain shower interrupts your date. What do you say?": "デート中に突然雨が降ってきました。どんな言葉をかけますか？",
 };
 export function translate(locale: Locale, source: string): string {
-  if (locale === "en") return english[source] ?? source;
-  return japanese[source] ?? reverseEnglish[source] ?? source;
+  if (locale === "en") return lookup(english, source) ?? source;
+  return lookup(japanese, source) ?? lookup(reverseEnglish, source) ?? source;
 }
 const reverseEnglish = Object.fromEntries(Object.entries(english).map(([ja, en]) => [en, ja]));
+function lookup(dictionary: Record<string, string>, source: string): string | undefined {
+  return Object.hasOwn(dictionary, source) ? dictionary[source] : undefined;
+}

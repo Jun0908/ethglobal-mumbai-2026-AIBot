@@ -42,4 +42,8 @@ test("localization does not rewrite the owner's approved answers", () => {
   assert.equal(result.behaviorExamples[0].response, answers[0].summary);
   assert.equal(result.behaviorExamples[0].tendency, "An example approved by the owner");
   assert.equal(translate("en", "User-created text"), "User-created text");
+  for (const source of ["__proto__", "constructor", "toString"]) {
+    assert.equal(translate("en", source), source);
+    assert.equal(translate("ja", source), source);
+  }
 });
