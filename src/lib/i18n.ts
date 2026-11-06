@@ -2,6 +2,18 @@ export type Locale = "ja" | "en";
 export function readLocale(value: string | null | undefined): Locale { return value === "en" ? "en" : "ja"; }
 
 export const english: Record<string, string> = {
+  "雨が降って、少し立ち止まる時間ができたね。": "The rain gives us a moment to pause.",
+  "私はゆっくり過ごすのが好き。こうして落ち着ける時間があるとうれしいな。": "I enjoy taking things slowly. A quiet moment together feels good to me.",
+  "予定外の展開って楽しいね！ 新しい発見があるとわくわくする。": "An unexpected turn makes this more fun! I love discovering something new.",
+  "まずデート体験を完了してください。": "Please finish the date experience first.",
+  "場面が変わりました。現在の選択肢から選んでください。": "The scene has changed. Choose one of the current actions.",
+  "この場面では選べない行動です。": "That action is not available in this scene.",
+  "これまでの回答を見る": "Review previous answers",
+  "選択肢を押すと送信して次へ進みます。「その他」だけ文字を入力できます。": "Tap an answer to send it and continue. Choose Other to write your own.",
+  "← 前の質問に戻って答え直す": "← Go back and change your answer",
+  "突然の雨で、デートの予定が変わった。3つの行動を選び、相手の反応を見ながら、ふたりだけの物語をつくろう。": "A sudden rainstorm changes your date. Make three choices, discover how your companion reacts, and create a story of your own.",
+  "雨の日のデートを遊ぶ": "Play a rainy-day date",
+  "すぐ遊ぶなら「雨の日のデートを遊ぶ」へ。自分のAIの作成は任意です。": "Choose “Play a rainy-day date” to play now. Creating your own AI is optional.",
   "回答（送信前に編集できます）": "Your answer (editable before sending)",
   "回答を送信して次へ →": "Send answer and continue →",
   "フィードバックを送信して修正 →": "Send feedback and revise →",
