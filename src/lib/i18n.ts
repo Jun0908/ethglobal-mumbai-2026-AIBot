@@ -2,6 +2,8 @@ export type Locale = "ja" | "en";
 export function readLocale(value: string | null | undefined): Locale { return value === "en" ? "en" : "ja"; }
 
 export const english: Record<string, string> = {
+  "写真好きのMiraと、話して遊んで思い出を作ろう。": "Talk, play and make memories with photography-loving Mira.",
+  "Miraと話す・遊ぶ": "Talk & play with Mira",
   "写真好きのMiraと出会う３話の物語。会話を重ねて、合うところも違うところも見つけよう。": "Meet photography-loving Mira in three connected chapters. Discover shared wishes and differences through conversation.",
   "Miraとの物語を遊ぶ": "Play Mira’s story",
   "お互いのチャイを選ぶデート。会話の選択で、ふたりの思い出を作ろう。": "Choose chai for each other. Your replies shape a rainy-day keepsake.",

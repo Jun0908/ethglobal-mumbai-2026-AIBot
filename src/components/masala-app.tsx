@@ -1,5 +1,6 @@
 "use client";
-import RomanceExperience from "./romance-experience";
+import PhotoPersonaBuilder from "./photo-persona-builder";
+import CompanionExperience from "./companion-experience";
 import { useEffect, useRef, useState } from "react";
 import { characterArt } from "@/lib/character-art";
 import ConversationExperience, { type ConversationTarget } from "./conversation-experience";
@@ -15,7 +16,7 @@ type Draft = {
     draftId: string;
     content: PersonaContent;
 };
-type View = "home" | "interview" | "calibrate" | "approved" | "game";
+type View = "photos" | "home" | "interview" | "calibrate" | "approved" | "game";
 const labels: Record<string, string> = { socialStyle: "会話のスタイル", humor: "ユーモア", values: "大切にすること", relationshipPace: "関係のペース", tone: "話し方", sentenceLength: "文章の長さ", asksFollowUpQuestions: "自然に質問する", handlesSilence: "沈黙への対応", initialReaction: "意見が違ったとき", repairStyle: "すれ違いの解き方" };
 async function postRequest<T>(path: string, body: unknown, locale: Locale): Promise<T> {
     const response = await fetch(`/api/${path}`, { method: "POST", headers: { "Content-Type": "application/json", "X-Masala-Language": locale }, body: JSON.stringify(body), signal: AbortSignal.timeout(65000) });
@@ -61,6 +62,7 @@ export default function MasalaApp() {
     const [options, setOptions] = useState<string[]>([...interviewOptions[0]]);
     const [choice, setChoice] = useState<number | "other" | null>(null);
     const [answer, setAnswer] = useState("");
+    const [editingPersonaId,setEditingPersonaId]=useState<string|undefined>();
     const [draft, setDraft] = useState<Draft | null>(null);
     const [proposal, setProposal] = useState<Draft | null>(null);
     const [scenario, setScenario] = useState(0);
@@ -141,7 +143,7 @@ export default function MasalaApp() {
         setFeedback("");
         setFinalConsent(false);
     }
-    function startInterview() { void run(async () => { await session(); resetInterview(); setView("interview"); }); }
+    function startInterview() { void run(async () => { await session(); setEditingPersonaId(undefined); resetInterview(); setView("photos"); }); }
     function startGame(target: string, _name: string) {
         void run(async () => {
             await session();
@@ -251,12 +253,13 @@ export default function MasalaApp() {
         </section>
         <section className="journey-strip"><span className="eyebrow">LESS SWIPING.<br />MORE CONNECTING.</span><div><span>01</span><p>Tell your story<small>{t("会話から、あなたらしさを。")}</small></p></div><div><span>02</span><p>Make it yours<small>{t("自分で確かめ、整える。")}</small></p></div><div><span>03</span><p>See what brews<small>{t("自由に話して、違いを楽しむ。")}</small></p></div></section>
         <section className="meet-section"><div className="section-heading"><div><p className="eyebrow">TWO PERSONALITIES. YOUR CONVERSATION.</p><h2>{t("まずは、会ってみよう。")}</h2></div><p className="muted small">{config?.demoMode ? t("架空の成人Persona・実際の相手ではありません") : t("認証済みのマッチから開始してください")}<br />{provider}</p></div>
-          {config?.demoMode ? <div className="persona-cards">{[{ id: "demo-calm", name: "Asha", label: "THE THOUGHTFUL ONE", desc: t("静かな場所と、ゆっくり深まる会話が好き。"), tags: [t("穏やか"), t("思慮深い"), t("ゆっくり")] }, { id: "demo-playful", name: "Mira", label: "THE SPONTANEOUS ONE", desc: t("写真好きのMiraと出会う３話の物語。会話を重ねて、合うところも違うところも見つけよう。"), tags: [t("遊び心"), t("好奇心"), t("自然体")] }].map((p, i) => <article className={`persona-card persona-${i}`} key={p.id}><div className="portrait-small"><img src={characterArt(p.id).src} style={{ objectPosition: characterArt(p.id).position }} alt={t("架空の成人キャラクターのイラスト")}/></div><div><p className="eyebrow">{p.label}</p><h3>{p.name} <small>27 · DEMO</small></h3><p>{p.desc}</p><div className="tags">{p.tags.map(tag => <span key={tag}>{tag}</span>)}</div></div><button className="round-button" aria-label={p.id === "demo-playful" ? t("Miraとの物語を遊ぶ") : locale === "en" ? `Talk to ${p.name}` : `${p.name}と話す`} disabled={busy || !adult} onClick={() => startGame(p.id, p.name)}>↗</button></article>)}</div> : <div className="panel l--stack -g:15"><p>{t("PSI連携元で本人確認を済ませ、マッチ情報を入力してください。")}</p><label>Match ID<input value={matchId} onChange={e => setMatchId(e.target.value)}/></label><label>Agent Persona ID<input value={matchPersonaId} onChange={e => setMatchPersonaId(e.target.value)}/></label><button className="button primary" disabled={!adult || busy || !matchId || !matchPersonaId} onClick={() => startGame(matchPersonaId, "Match")}>{t("マッチしたAIと話す")}</button></div>}
+          {config?.demoMode ? <div className="persona-cards">{[{ id: "demo-calm", name: "Asha", label: "THE THOUGHTFUL ONE", desc: t("静かな場所と、ゆっくり深まる会話が好き。"), tags: [t("穏やか"), t("思慮深い"), t("ゆっくり")] }, { id: "demo-playful", name: "Mira", label: "THE SPONTANEOUS ONE", desc: t("写真好きのMiraと、話して遊んで思い出を作ろう。"), tags: [t("遊び心"), t("好奇心"), t("自然体")] }].map((p, i) => <article className={`persona-card persona-${i}`} key={p.id}><div className="portrait-small"><img src={characterArt(p.id).src} style={{ objectPosition: characterArt(p.id).position }} alt={t("架空の成人キャラクターのイラスト")}/></div><div><p className="eyebrow">{p.label}</p><h3>{p.name} <small>27 · DEMO</small></h3><p>{p.desc}</p><div className="tags">{p.tags.map(tag => <span key={tag}>{tag}</span>)}</div></div><button className="round-button" aria-label={p.id === "demo-playful" ? t("Miraと話す・遊ぶ") : locale === "en" ? `Talk to ${p.name}` : `${p.name}と話す`} disabled={busy || !adult} onClick={() => startGame(p.id, p.name)}>↗</button></article>)}</div> : <div className="panel l--stack -g:15"><p>{t("PSI連携元で本人確認を済ませ、マッチ情報を入力してください。")}</p><label>Match ID<input value={matchId} onChange={e => setMatchId(e.target.value)}/></label><label>Agent Persona ID<input value={matchPersonaId} onChange={e => setMatchPersonaId(e.target.value)}/></label><button className="button primary" disabled={!adult || busy || !matchId || !matchPersonaId} onClick={() => startGame(matchPersonaId, "Match")}>{t("マッチしたAIと話す")}</button></div>}
           {personaId && <div className="owned-persona"><label>{t("あなたの承認済みPersona")}<select aria-label={t("承認済みPersonaを選ぶ")} value={personaId} onChange={e => setPersonaId(e.target.value)} disabled={busy}>{personaIds.map((id, i) => <option value={id} key={id}>Persona {personaIds.length - i}</option>)}</select></label>{config?.demoMode && <button className="link-button" disabled={busy} onClick={() => startGame(personaId, "Your AI")}>{t("自分のAIと話す →")}</button>}<button className="link-button danger" disabled={busy} onClick={revoke}>{t("利用同意を撤回")}</button></div>}
           {dateResult && <p className="notice" role="status">{t(dateResult)}</p>}
         </section>
       </>}
 
+      {view === "photos" && <PhotoPersonaBuilder personaId={editingPersonaId} locale={locale} onHome={()=>setView("home")} onApproved={id=>{setPersonaId(id);setPersonaIds(ids=>[id,...ids.filter(v=>v!==id)]);setView("approved");}}/>}
       {view === "interview" && <section className="workspace">
         <div className="workspace-heading"><p className="eyebrow">01 / GETTING TO KNOW YOU</p><h2>{t("あなたの言葉で、")}<em>{t("あなたらしく。")}</em></h2><p className="muted">{t("正解はありません。会話するときの、いつものあなたを教えてください。")}</p></div>
         <div className="interview-grid"><aside className="sidebar l--stack -g:20"><Cup /><h3>A little conversation.</h3><p>{t("スキップを含めて最大6問で終了します。回答が1つあれば、途中でも次へ進めます。")}</p><div className="progress-label"><span>{t("質問の進み具合")}</span><b>{interview.completed} / {INTERVIEW_LIMIT}</b></div><progress aria-label={t("質問の進み具合")} value={interview.completed} max={INTERVIEW_LIMIT}/><p className="small">{t("送信した回答")}: {answers.length} · {t("スキップ")}: {skipped}</p><p className="small muted">{t("送信先：")}{provider}<br />{t("回答を送信すると、これまでの回答とともにAIが処理します。氏名・連絡先・住所は含めないでください。生回答全文は保存しません。")}</p><button className="link-button" onClick={() => setPrivacy(true)}>{t("情報の扱いを確認 →")}</button></aside>
@@ -287,8 +290,8 @@ export default function MasalaApp() {
 
       {view === "approved" && <section className="success-page l--stack -g:20"><span className="success-mark">♡</span><p className="eyebrow">APPROVED BY YOU</p><h2>{t("あなたらしさに、")}<br /><em>{t("ひとさじのスパイス。")}</em></h2><p>{t("Personaを暗号化して保存しました。")}<br />{t("承認した会話の傾向だけを、シミュレーションに使います。")}</p><div className="l--cluster -g:15">{config?.demoMode && <button className="button primary" disabled={busy} onClick={() => startGame(personaId, "Your AI")}>{t("自分のAIと話してみる →")}</button>}<button className="button secondary" onClick={() => setView("home")}>{t("ホームへ")}</button></div><button className="link-button danger" disabled={busy} onClick={revoke}>{t("利用同意を撤回する")}</button></section>}
 
-      {view === "game" && conversationTarget?.id === "demo-playful" && <RomanceExperience locale={locale} onHome={() => setView("home")}/>}
-      {view === "game" && conversationTarget?.id !== "demo-playful" && <ConversationExperience onMira={() => setConversationTarget({id:"demo-playful",matchId:"demo-match"})} key={conversationTarget?.id || "companions"} locale={locale} demo={!!config?.demoMode} initialTarget={conversationTarget} onHome={() => setView("home")} onBusyChange={setBusy}/>}
+      {view === "game" && conversationTarget && <CompanionExperience key={conversationTarget.id} target={conversationTarget.id} matchId={conversationTarget.matchId} own={personaIds.includes(conversationTarget.id)} onTune={()=>{setEditingPersonaId(conversationTarget.id);setView("photos");}} locale={locale} onHome={()=>setView("home")}/> }
+      {view === "game" && !conversationTarget && <ConversationExperience onMira={() => setConversationTarget({id:"demo-playful",matchId:"demo-match"})} key="companions" locale={locale} demo={!!config?.demoMode} initialTarget={conversationTarget} onHome={() => setView("home")} onBusyChange={setBusy}/>}
 
     </main>
     <footer className="site-footer"><p><span>✳</span> LOVE MATCH MASALA <small>JAPAN MEETS INDIA. YOU MEET POSSIBILITY.</small></p><span>Made for meaningful conversations.</span><button className="link-button" onClick={() => setPrivacy(true)}>Your privacy, always. ↗</button></footer>

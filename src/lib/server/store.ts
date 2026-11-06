@@ -12,11 +12,12 @@ import { isDemo } from "./config";
 export const capsuleSchema = z.object({
   personaId: z.string().uuid(), ownerId: z.string(), version: z.number().int().positive(),
   content: personaContentSchema,
+  visual: z.object({choices:z.array(z.array(z.number().int().min(0).max(3)).max(2)).length(3),voice:z.enum(["natural","gentle","playful"])}).optional(),
   boundaries: z.object({ revealPrivateInformation: z.literal(false), allowSensitiveQuestions: z.literal(false) }),
   consent: z.object({ simulationApproved: z.boolean(), approvedAt: z.string().nullable() }),
 });
 export type Capsule = z.infer<typeof capsuleSchema>;
-export type Draft = { id: string; ownerId: string; content: PersonaContent; expiresAt: number };
+export type Draft = { id: string; ownerId: string; content: PersonaContent; expiresAt: number; visual?: Capsule["visual"] };
 export type Identity = { ownerId: string; subject: string | null; expiresAt: number; personaIds: string[] };
 type State = {
   conversations: Map<string, Conversation>;

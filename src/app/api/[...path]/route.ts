@@ -1,3 +1,4 @@
+import { photoPersona } from "@/lib/photo-persona";
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -47,6 +48,25 @@ async function dispatch(path: string, body: unknown, person: Identity, locale: L
       if (interviewProgress(input.answers.length, input.skipped).finished) return { completed: true, question: null };
       return { ...await nextQuestion(input.answers, input.skipped, locale), completed: false };
     }
+    case "persona/photos/get": {
+      const input=z.object({personaId:z.string().uuid()}).strict().parse(body);
+      const capsule=await capsuleFor(input.personaId);
+      if(capsule.ownerId!==person.ownerId||!capsule.consent.simulationApproved)throw new ApiError(403,"Persona unavailable");
+      return {visual:capsule.visual??null};
+    }
+    case "persona/photos": {
+      const input=z.object({choices:z.array(z.array(z.number().int().min(0).max(3)).max(2)).length(3),voice:z.enum(['natural','gentle','playful'])}).strict().parse(body);
+      const draft=createDraft(person.ownerId,photoPersona(input.choices,input.voice,locale));
+      draft.visual=input;
+      return {draftId:draft.id,content:draft.content};
+    }
+    case "persona/preview": {
+      const input=z.object({draftId:idSchema,message:z.string().trim().min(1).max(1200)}).strict().parse(body);
+      const draft=draftFor(input.draftId,person.ownerId);
+      const reply=await agentReply(draft.content,input.message,0,[],locale);
+      draft.content.behaviorExamples=[...draft.content.behaviorExamples.slice(0,7),{situation:input.message.slice(0,300),response:reply.dialogue.slice(0,500),tendency:locale==='ja'?'本人が確認するプレビュー':'Preview for owner approval'}];
+      return reply;
+    }
     case "persona/extract": {
       const input = approvedAnswersSchema.parse(body);
       ensureNoPrivateText(input.answers);
@@ -67,13 +87,15 @@ async function dispatch(path: string, body: unknown, person: Identity, locale: L
       return { draftId: proposal.id, content: proposal.content };
     }
     case "persona/approve": {
-      const input = z.object({ draftId: idSchema, simulationApproved: z.literal(true), examplesApproved: z.literal(true), adultConfirmed: z.literal(true) }).strict().parse(body);
+      const input = z.object({ personaId:z.string().uuid().optional(), draftId: idSchema, simulationApproved: z.literal(true), examplesApproved: z.literal(true), adultConfirmed: z.literal(true) }).strict().parse(body);
       return locked(`draft:${input.draftId}`, async () => {
         const draft = draftFor(input.draftId, person.ownerId);
         ensureNoPrivateText(draft.content);
-        const capsule: Capsule = { personaId: randomUUID(), ownerId: person.ownerId, version: 1, content: draft.content, boundaries: { revealPrivateInformation: false, allowSensitiveQuestions: false }, consent: { simulationApproved: true, approvedAt: new Date().toISOString() } };
+        const previous=input.personaId?await capsuleFor(input.personaId):null;
+        if(previous&&previous.ownerId!==person.ownerId)throw new ApiError(403,"Persona unavailable");
+        const capsule: Capsule = { visual:draft.visual, personaId: previous?.personaId??randomUUID(), ownerId: person.ownerId, version: (previous?.version??0)+1, content: draft.content, boundaries: { revealPrivateInformation: false, allowSensitiveQuestions: false }, consent: { simulationApproved: true, approvedAt: new Date().toISOString() } };
         await saveCapsule(capsule);
-        person.personaIds = [capsule.personaId, ...(person.personaIds ?? [])];
+        person.personaIds = [capsule.personaId, ...(person.personaIds ?? []).filter(id=>id!==capsule.personaId)];
         state.drafts.delete(draft.id);
         return { personaId: capsule.personaId, approved: true };
       });
