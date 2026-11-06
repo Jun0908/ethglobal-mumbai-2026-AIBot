@@ -52,7 +52,7 @@ export function applyPersonality(content:PersonaContent,choices:PersonalityChoic
     if(item.id==='firstMeeting')result.personality.socialStyle=selected;
     if(item.id==='whenClose'&&option.id==='joke')result.personality.humor=option.detail[lang];
     if(item.id==='romancePace')result.personality.relationshipPace=selected;
-    if(item.id==='care'||item.id==='planning')result.personality.values.push(selected.slice(0,100));
+    if(item.id==='care'||item.id==='planning')result.personality.values.push(`${item.title[lang]} ${option.label[lang]}`);
     if(item.id==='repair'){result.conflictBehavior.initialReaction=option.detail[lang];result.conflictBehavior.repairStyle=option.example[lang];}
     result.behaviorExamples.push({situation:item.title[lang],response:option.example[lang],tendency:locale==='ja'?'本人が選んだ傾向の返答例。実体験ではない。':'Example of a self-selected tendency, not a real past event.'});
   }

@@ -615,3 +615,23 @@
  .demo-reset-trigger:focus-visible {outline:2px solid #716c46;outline-offset:4px;}
  .demo-reset-dialog h2 {font-size:26px;margin-bottom:18px;}.demo-reset-dialog p {line-height:1.8;margin:16px 0;}.demo-reset-dialog select {display:block;width:100%;margin-top:8px;}
 }
+
+@layer masala {
+ .builder-fields {border:0;padding:0;margin:0;min-width:0;}
+ .photo-builder h1:focus {outline:none;}
+ .personality-scene {display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:28px;align-items:center;margin:24px 0;}
+ .personality-scene>img {width:100%;height:auto;aspect-ratio:3/2;object-fit:cover;border-radius:22px;border:1px solid #d8c6a5;}
+ .personality-options {display:grid;gap:10px;min-width:0;}
+ .personality-option {display:flex;gap:12px;align-items:center;text-align:left;background:#fffaf1;color:#4c5135;border:1px solid #c8bd9f;border-radius:14px;padding:15px 16px;cursor:pointer;min-height:72px;}
+ .personality-option strong,.personality-option small {display:block;line-height:1.5;}.personality-option strong {font-size:16px;}.personality-option small {font-size:12px;margin-top:4px;color:#69704f;}
+ .personality-check {font-size:21px;flex:none;width:24px;text-align:center;}
+ .personality-option[aria-pressed=true] {background:#e7ecd9;border-color:#58663b;box-shadow:0 0 0 2px #58663b;}
+ .personality-option:hover {border-color:#58663b;}
+ .personality-summary {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:24px 0;}
+ .personality-summary-card {display:flex;flex-direction:column;padding:0;text-align:left;background:#fffaf1;border:1px solid #d0bc96;border-radius:16px;overflow:hidden;color:#4c5135;cursor:pointer;}
+ .personality-summary-card>img {width:100%;height:auto;aspect-ratio:2.4;object-fit:cover;}
+ .personality-summary-card>span {display:grid;gap:6px;padding:12px;}.personality-summary-card strong {font-size:14px;line-height:1.5;}.personality-summary-card small {font-size:11px;line-height:1.5;}.personality-edit {font-size:11px;text-decoration:underline;text-underline-offset:3px;}
+ .personality-summary-card:hover {border-color:#58663b;}
+ .builder-fields:disabled {opacity:.65;}.builder-fields button:disabled {cursor:wait;}
+ @media(max-width:700px){.personality-scene {grid-template-columns:1fr;gap:16px;margin:18px 0;}.personality-scene>img {max-height:230px;}.personality-summary {grid-template-columns:repeat(2,minmax(0,1fr));}.personality-option {min-height:68px;padding:12px;}.personality-option strong {font-size:15px;}.personality-option small {font-size:12px;}.personality-summary-card>span {padding:10px;}}
+}
