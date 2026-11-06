@@ -15,7 +15,8 @@ export default function RomanceRelationship({state,locale}:{state:Pick<RomanceSt
  const activeNode=visual.nodes.find(n=>n.dimension===selected);
  const memoryChapter=selected?.startsWith('chapter-')?Number(selected.slice(8)):-1;
  const evidence=activeNode?.evidence??visual.memories.filter(m=>Math.floor(m.beat/4)===memoryChapter);
- return <aside className="relationship-panel" aria-label={p('ふたりの距離と相性','Your relationship & discoveries')}>
+ return <aside id="relationship-panel" className="relationship-panel" aria-label={p('ふたりの距離と相性','Your relationship & discoveries')}>
+  <button className="relationship-mobile-link link-button" onClick={()=>document.getElementById('romance-play-main')?.scrollIntoView({block:'start'})}>{p('会話に戻る','Back to conversation')}</button>
   <h2>{p('ふたりの距離','Growing closer')}</h2>
   <ol className="relationship-hearts" aria-label={p('物語の進展','Story milestones')}>
    {[p('出会い','Meeting'),p('親しさ','Familiarity'),p('信頼','Trust'),p('特別','Something special')].map((label,i)=><li key={i} className={i<=visual.milestone?'reached':''} aria-current={i===visual.milestone?'step':undefined}><Heart weight={i<=visual.milestone?'fill':'regular'} aria-hidden/><span>{label}</span></li>)}

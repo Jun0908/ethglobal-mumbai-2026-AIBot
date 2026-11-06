@@ -557,3 +557,12 @@
  @media(max-width:800px) {.romance-game {padding:16px;}.romance-play-layout {grid-template-columns:1fr;gap:20px;}.relationship-panel {position:static;padding:22px;}.romance-stage {height:350px;}.relationship-map {grid-template-columns:1fr 1fr;gap:12px 36px;}.relationship-node {min-height:120px;}.romance-game .conversation-toolbar {flex-wrap:wrap;gap:10px;}.romance-game .conversation-toolbar > span {order:3;width:100%;}.relationship-panel h2 {font-size:23px;}}
  @media(prefers-reduced-motion:no-preference) {.relationship-hearts .reached svg {animation:relationship-reveal .35s ease-out;}.relationship-node {transition:background .25s,outline .15s;}@keyframes relationship-reveal {from {transform:scale(.85);opacity:.6;}to {transform:scale(1);opacity:1;}}}
 }
+@layer masala {
+ .relationship-node {width:100%;max-width:160px;aspect-ratio:1;border-radius:50%;justify-self:center;}
+ .relationship-mobile-link {display:none;}
+ .relationship-panel {scroll-margin-top:20px;}
+ @media(max-width:800px) {.relationship-mobile-link {display:block;margin:0 0 16px;}.relationship-node {max-width:140px;}}
+}
+@layer masala {
+ @media(max-width:800px) {.relationship-hearts li[aria-current] span {font-size:11px;padding:4px 5px;white-space:nowrap;}.relationship-hearts li {font-size:11px;}}
+}

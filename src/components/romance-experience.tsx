@@ -18,7 +18,8 @@ export default function RomanceExperience({locale,onHome}:{locale:Locale;onHome:
  }
  useEffect(()=>{void send('get'); /* eslint-disable-next-line react-hooks/exhaustive-deps */},[]);
  useEffect(()=>{if(state?.revision)reply.current?.focus({preventScroll:true});},[state?.revision]);
- const chapter=Math.min(2,Math.floor((state?.step??0)/4)),scene=state&&beats[Math.min(state.step,11)];
+ const visibleStep=state?.paused?Math.max(0,state.step-1):(state?.step??0);
+ const chapter=Math.min(2,Math.floor(visibleStep/4)),scene=state&&beats[Math.min(visibleStep,11)];
  const emotion=state?.emotion??'happy';
  const feeling={happy:p('楽しそうに笑う','Smiling warmly'),shy:p('少し目をそらして微笑む','Glancing away with a small smile'),neutral:p('こちらを見て、言葉を待つ','Watching you, giving you room'),troubled:p('少し考え込む','Taking a moment to think')}[emotion];
  return <section className="romance-game">
@@ -27,7 +28,8 @@ export default function RomanceExperience({locale,onHome}:{locale:Locale;onHome:
  {!state?<p role="status">{p('物語を読み込んでいます…','Loading your story…')}</p>:<>
  <p className="eyebrow">{p(`第${chapter+1}話`, `CHAPTER ${chapter+1}`)} · {chapters[chapter][locale]}</p>
  {state.practice&&<p role="status">{p('別の選び方を試しています。本編の記録は残っています。','Trying a different path. Your original story is saved.')} <button disabled={busy} onClick={()=>void send('restore')}>{p('本編へ戻る','Return to original story')}</button></p>}
- <div className="romance-play-layout"><div className="romance-play-main">
+ <button className="relationship-mobile-link button secondary" onClick={()=>document.getElementById('relationship-panel')?.scrollIntoView({block:'start'})}>{p('ハート・相性図を見る','See hearts & compatibility')}</button>
+ <div className="romance-play-layout"><div id="romance-play-main" className="romance-play-main">
  <div className={`romance-stage emotion-${emotion} chapter-${chapter}`}>
  {emotion==='happy'?<img className="romance-portrait" src={characterArt('Mira').src} alt={p('楽しそうに笑うMira','Mira smiling warmly')}/>:<div className={`romance-expression expression-${emotion}`} role="img" aria-label={feeling}/>}
  <div className="romance-caption"><p>{scene?.scene[locale]}</p><span>{feeling}</span></div>
