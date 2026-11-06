@@ -2,7 +2,8 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { idSchema } from "../schemas";
-import { appendConversation, conversationSummary, createConversation, dimensionIds, feelingSchema, MAX_CONVERSATION_TURNS, publicConversation, switchSuggestionLanguage, type Conversation } from "../conversation";
+import { appendConversation, conversationSummary, createConversation, dimensionIds, feelingSchema, MAX_CONVERSATION_TURNS, publicConversation, setCafeSuggestions, switchSuggestionLanguage, type Conversation } from "../conversation";
+import { cafeIntent, cafeOptions, cafeStory, chooseCafe } from "../cafe-adventure";
 import { chooseStory, rainStory, storyText } from "../rain-story";
 import type { Locale } from "../i18n";
 import { ApiError, locked } from "./security";
@@ -32,6 +33,7 @@ function touch(c: Conversation, person: Identity) {
 
 async function localizeSuggestions(c: Conversation, locale: Locale) {
   if (c.suggestions.locale === locale) return;
+  if (c.adventure) { setCafeSuggestions(c, locale); return; }
   const player = c.messages.filter(m => m.role === "user").at(-1)?.text ?? "";
   const companion = c.messages.filter(m => m.role === "assistant").at(-1)?.text ?? "";
   switchSuggestionLanguage(c, locale, await playerSuggestions(c, player, companion, locale));
@@ -122,7 +124,12 @@ export async function dispatchConversation(path: string, body: unknown, person: 
       if (input.revision !== c.revision) return fail(locale, 409, "会話が更新されています。相手一覧から続きを開き直してください。", "The conversation changed. Reopen it from the companion list.");
       if (c.revision >= MAX_CONVERSATION_TURNS) return fail(locale, 409, "この会話は60往復になりました。振り返るか、新しいデートを始めてください。", "This conversation reached 60 exchanges. Reflect or start a new date.");
       let text: string; let kind: "story_action" | "free_text" | "suggested_reply"; let story = c.story;
-      if (path === "dialogue/action") {
+      let cafeAction: string | undefined;
+      if (path === "dialogue/action" && c.adventure) {
+        const choice = cafeOptions(c.adventure).find(o => o.id === input.choiceId);
+        if (!choice || input.message || input.suggestionId) return fail(locale, 400, "今の会話の選択肢を選んでください。", "Choose an option from the current conversation.");
+        text = choice.label[locale]; kind = "suggested_reply"; cafeAction = choice.id;
+      } else if (path === "dialogue/action") {
         const choice = rainStory[c.story.node].choices.find(choice => choice.id === input.choiceId);
         if (!choice || input.message || input.suggestionId) return fail(locale, 400, "今の場面の行動を選んでください。", "Choose an action for the current scene.");
         text = storyText(choice.label, locale); kind = "story_action"; story = chooseStory(c.story, choice.id);
@@ -138,10 +145,19 @@ export async function dispatchConversation(path: string, body: unknown, person: 
         const suggestion = c.suggestions.items.find(s => s.id === input.suggestionId);
         if (input.suggestionId && (!suggestion || c.suggestions.revision !== c.revision || c.suggestions.locale !== locale)) return fail(locale, 409, "この候補は更新されています。自分の言葉で話すこともできます。", "This suggestion is outdated. You can write your own reply.");
         text = input.message || suggestion!.text; kind = input.suggestionId ? "suggested_reply" : "free_text";
+        if (c.adventure) cafeAction = suggestion?.actionId ?? cafeIntent(c.adventure, text);
       }
-      const reply = await conversationReply(capsule.content, { ...c, story }, text, locale, kind === "story_action" ? { before: c.story, choiceId: input.choiceId! } : undefined);
+      let adventure = c.adventure ? structuredClone(c.adventure) : undefined;
+      const event = adventure && cafeAction ? chooseCafe(adventure, cafeAction) : undefined;
+      if (event) { adventure = event.adventure; story = cafeStory(adventure, c.story); }
+      else if (adventure) adventure.chats++;
+      const reply = event
+        ? { dialogue: event.dialogue[locale], emotion: "happy" as const, tone: "playful" as const, conversationEvent: "connection" as const, suggestedNextAction: "continue" as const, suggestions: [] }
+        : await conversationReply(capsule.content, { ...c, story, adventure }, text, locale, kind === "story_action" ? { before: c.story, choiceId: input.choiceId! } : undefined);
       await authorize(c, person, locale);
       const next = appendConversation(c, text, kind, reply, locale, story);
+      next.adventure = adventure;
+      if (adventure) setCafeSuggestions(next, locale);
       // Analysis and feedback may have completed while the response was generating.
       next.reports = c.reports; next.dismissed = c.dismissed; next.feelings = c.feelings;
       next.receipts[input.clientTurnId] = { fingerprint, revision: next.revision };
