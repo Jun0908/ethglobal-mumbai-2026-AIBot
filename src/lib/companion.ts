@@ -7,3 +7,8 @@ export type CompanionState={version:1;revision:number;messages:Message[];evidenc
 export const newCompanion=():CompanionState=>({version:1,revision:0,messages:[],evidence:[],plans:[],game:null,saved:[],receipts:{},updatedAt:Date.now()});
 export function dashboardTopics(s:Pick<CompanionState,'messages'|'evidence'>&{plans?:Plan[]}){return (Object.keys(topicLabels) as Topic[]).flatMap(topic=>{const evidence=s.evidence.filter(e=>e.topic===topic&&e.source!=='game'&&!s.plans?.some(p=>p.messageIds.includes(e.userId))&&s.messages.some(m=>m.id===e.userId)&&s.messages.some(m=>m.id===e.partnerId));return evidence.length?[{topic,evidence,expanded:new Set(evidence.map(e=>e.userId)).size>=2}]:[];}).sort((a,b)=>b.evidence.length-a.evidence.length);}
 export function forgetExchange(s:CompanionState,userId:string){const index=s.messages.findIndex(m=>m.id===userId&&m.role==='user');if(index<0)return s;const ids=new Set([userId,s.messages[index+1]?.id]);return {...s,messages:s.messages.filter(m=>!ids.has(m.id)),evidence:s.evidence.filter(e=>!ids.has(e.userId)&&!ids.has(e.partnerId)),plans:s.plans.filter(p=>!p.messageIds.some(id=>ids.has(id))),game:s.game?.messageIds.some(id=>ids.has(id))?null:s.game};}
+
+export function explicitTopic(user:string,partner:string):Topic|undefined {
+ const patterns:[Topic,RegExp][]=[['photos',/写真|カメラ|撮[るりっ影]|撮りました|photograph|camera|photos?/i],['food',/料理|食べ|カフェ|レストラン|café|cafe|food|cook|restaurant/i],['music',/音楽|曲|歌|music|song|concert/i],['games',/ゲーム|game|boardgame/i],['places',/旅行|街歩き|海辺|旅先|travel|city walk|beach/i]];
+ return patterns.find(([,pattern])=>pattern.test(user)&&pattern.test(partner))?.[0];
+}
