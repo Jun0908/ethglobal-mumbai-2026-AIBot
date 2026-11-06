@@ -46,7 +46,8 @@ async function loadKey() {
   if (key.length !== 32) throw new Error("Invalid demo key");
   return key;
 }
-function key() { return state.key ??= loadKey(); }
+export function storageKey() { return state.key ??= loadKey(); }
+const key = storageKey;
 export async function saveCapsule(capsule: Capsule) {
   capsuleSchema.parse(capsule);
   await mkdir(dataDir(), { recursive: true });
