@@ -607,3 +607,11 @@
  .extra-photo-10 {background-position:66.666667% 100%;}
  .extra-photo-11 {background-position:100.000000% 100%;}
 }
+
+@layer masala {
+ .story-asha .memory-art {background-image:url('/asha-memories.png');}
+ .story-asha .romance-stage {background:#716751;}
+ .demo-reset-trigger {font:inherit;letter-spacing:inherit;color:inherit;padding:0;background:none;border:0;cursor:default;}
+ .demo-reset-trigger:focus-visible {outline:2px solid #716c46;outline-offset:4px;}
+ .demo-reset-dialog h2 {font-size:26px;margin-bottom:18px;}.demo-reset-dialog p {line-height:1.8;margin:16px 0;}.demo-reset-dialog select {display:block;width:100%;margin-top:8px;}
+}

@@ -1,8 +1,9 @@
-import {beats, type RomanceState} from './romance-story';
+import {storyFor, type StoryId,type RomanceState} from './romance-story';
 
 type RecordState = Pick<RomanceState, 'messages' | 'memories'>;
 export const dimensions = ['pace', 'activities', 'differences', 'closeness'] as const;
-export function romanceVisuals(state: RecordState) {
+export function romanceVisuals(state: RecordState,story:StoryId='mira') {
+  const {beats}=storyFor(story);
   // Deleted or incomplete evidence must never leave a discovery on the map.
   const memories = state.memories.filter(m => state.messages.some(v => v.id === m.playerId) && state.messages.some(v => v.id === m.partnerId));
   const choice = (beat: number) => {

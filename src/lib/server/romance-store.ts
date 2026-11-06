@@ -4,16 +4,16 @@ import {mkdir,readFile,writeFile,rename,unlink,readdir,stat} from 'node:fs/promi
 import {resolve,join} from 'node:path';
 import {encrypt,decrypt} from '../crypto';
 import {storageKey} from './store';
-import {newRomance,type RomanceState} from '../romance-story';
+import {newRomance,type RomanceState,type StoryId} from '../romance-story';
 import type {Locale} from '../i18n';
 export const romanceTTL=30*24*60*60*1000;
 const directory=()=>resolve('.data/romance');
 function path(token:string){if(!/^[a-f0-9]{64}$/.test(token))throw new Error('Invalid token');return join(directory(),createHash('sha256').update(token).digest('hex')+'.json');}
-export async function readRomance(token:string,locale:Locale):Promise<RomanceState>{
+export async function readRomance(token:string,locale:Locale,story:StoryId='mira'):Promise<RomanceState>{
  try{const raw=JSON.parse(await readFile(path(token),'utf8'));const state=decrypt(raw,await storageKey()) as RomanceState;
  if(state.version!==1 || !Array.isArray(state.messages))throw new Error('Invalid save');
- if(state.updatedAt+romanceTTL<Date.now()){await unlink(path(token));return newRomance(locale);}return state;
- }catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')return newRomance(locale);throw error;}
+ if(state.updatedAt+romanceTTL<Date.now()){await unlink(path(token));return newRomance(locale,story);}return state;
+ }catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')return newRomance(locale,story);throw error;}
 }
 export async function saveRomance(token:string,state:RomanceState){
  await mkdir(directory(),{recursive:true});const target=path(token),temp=target+'.'+randomUUID()+'.tmp';

@@ -1,3 +1,4 @@
+import {ashaBeats,ashaChapters} from './asha-story';
 import type { Locale } from './i18n';
 export type Copy = { ja: string; en: string };
 const c = (ja: string, en: string): Copy => ({ ja, en });
@@ -21,8 +22,11 @@ export const beats: Beat[] = [
 ];
 export type RomanceMessage = {id:string;role:'user'|'assistant';text:string;locale:Locale;beat:number};
 export type RomanceState = {version:1;revision:number;step:number;paused:boolean;emotion:Option['emotion'];messages:RomanceMessage[];memories:{id:string;beat:number;playerId:string;partnerId:string;label:Copy;dimension?:Option['dimension'];observation?:Option['observation']}[];receipts:Record<string,string>;updatedAt:number;feeling?:'natural'|'effort'|'unsure';practiceBase?:RomanceState};
-export function newRomance(locale:Locale):RomanceState {return {version:1,revision:0,step:0,paused:false,emotion:'happy',messages:[{id:crypto.randomUUID(),role:'assistant',text:beats[0].line[locale],locale,beat:0}],memories:[],receipts:{},updatedAt:Date.now()};}
-export function chooseRomance(state:RomanceState,index:number,locale:Locale,playerText?:string) {
+export type StoryId='mira'|'asha';
+export function storyFor(id:StoryId){return id==='asha'?{beats:ashaBeats,chapters:ashaChapters}:{beats,chapters};}
+export function newRomance(locale:Locale,story:StoryId='mira'):RomanceState {const {beats}=storyFor(story);return {version:1,revision:0,step:0,paused:false,emotion:'happy',messages:[{id:crypto.randomUUID(),role:'assistant',text:beats[0].line[locale],locale,beat:0}],memories:[],receipts:{},updatedAt:Date.now()};}
+export function chooseRomance(state:RomanceState,index:number,locale:Locale,playerText?:string,story:StoryId='mira') {
+ const {beats}=storyFor(story);
  if(state.paused || state.step>=beats.length) throw new Error('Scene is not active');
  const beat=state.step, option=beats[beat].options[index]; if(!option) throw new Error('Invalid option');
  const next=structuredClone(state); const playerId=crypto.randomUUID(),partnerId=crypto.randomUUID();
@@ -32,16 +36,19 @@ export function chooseRomance(state:RomanceState,index:number,locale:Locale,play
  if(!next.paused) next.messages.push({id:crypto.randomUUID(),role:'assistant',text:beats[next.step].line[locale],locale,beat:next.step});
  return next;
 }
-export function resumeChapter(state:RomanceState,locale:Locale) {
+export function resumeChapter(state:RomanceState,locale:Locale,story:StoryId='mira') {
+ const {beats}=storyFor(story);
  if(!state.paused || state.step>=beats.length) throw new Error('No next chapter');
  const next=structuredClone(state);next.paused=false;next.revision++;next.updatedAt=Date.now();
  const previous=next.memories.find(m=>m.beat===(next.step===4?1:5));
  const quote=previous && next.messages.find(m=>m.id===previous.playerId);
  const callback=quote ? (locale==='ja'?`前に「${quote.text}」って話してくれたね。覚えてるよ。 `:`You said “${quote.text}” last time. I remember. `):'';
- const adjusted=previous?.observation==='different'?(next.step===4?c('今日は返事を急かさないから、ゆっくり歩こう。','I will give you time to answer today. Let us walk slowly.'):c('今日は予定を決めておいたよ。帰り道の変更も、先に相談するね。','I planned our time today. I will ask before changing our route.')):previous?.observation==='aligned'?(next.step===4?c('今日はお互い、思いついたことを話しながら歩こう。','Today we can chat as thoughts come while we walk.'):c('写真を見たあと、気になる道があったら一緒に考えよう。','After the photos, we can decide together if a lane catches our eye.')):null;
+ const miraAdjusted=previous?.observation==='different'?(next.step===4?c('今日は返事を急かさないから、ゆっくり歩こう。','I will give you time to answer today. Let us walk slowly.'):c('今日は予定を決めておいたよ。帰り道の変更も、先に相談するね。','I planned our time today. I will ask before changing our route.')):previous?.observation==='aligned'?(next.step===4?c('今日はお互い、思いついたことを話しながら歩こう。','Today we can chat as thoughts come while we walk.'):c('写真を見たあと、気になる道があったら一緒に考えよう。','After the photos, we can decide together if a lane catches our eye.')):null;
+ const adjusted=story==='mira'?miraAdjusted:previous?.observation==='different'?(next.step===4?c('今日は、考え中ならそう伝えるね。あなたの思いつきも聞きたいから。','Today I will tell you when I am thinking. I want to hear your spontaneous thoughts too.'):c('休憩には自由に話せる時間も作ったよ。静かな朗読と、にぎやかな時間、両方あってもいいね。','I left an open break for conversation. There can be room for quiet readings and lively moments.')):previous?.observation==='aligned'?(next.step===4?c('今日も、言葉が浮かぶまでゆっくりでいいね。','We can take our time finding words today too.'):c('椅子は少なめにしたよ。静かに話せる距離で。','I kept the circle small, close enough for quiet conversation.')):null;
  next.emotion='happy';next.messages.push({id:crypto.randomUUID(),role:'assistant',text:callback+(adjusted?adjusted[locale]+' ':'')+beats[next.step].line[locale],locale,beat:next.step});return next;
 }
-export function allowedFreeIntent(step:number,text:string,index:number|undefined,locale:Locale){
+export function allowedFreeIntent(step:number,text:string,index:number|undefined,locale:Locale,story:StoryId='mira'){
+ const {beats}=storyFor(story);
  if(index===undefined || !beats[step]?.options[index])return undefined;
  const normalize=(value:string)=>value.trim().replace(/[。.!！?？\s]/g,'').toLowerCase();
  if(normalize(text)===normalize(beats[step].options[index].label[locale]))return index;

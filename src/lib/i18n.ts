@@ -3,6 +3,7 @@ export function readLocale(value: string | null | undefined): Locale { return va
 
 export const english: Record<string, string> = {
   "写真好きのMiraと、話して遊んで思い出を作ろう。": "Talk, play and make memories with photography-loving Mira.",
+  "古書店で出会うAshaと、小さな朗読会を作る３話の物語。": "Meet Asha in a bookshop and create a little reading night in three chapters.",
   "誰と過ごそう？": "Who would you like to meet?",
   "話す・遊ぶ": "Talk & play",
   "本人が確認するプレビュー": "Preview for owner approval",
