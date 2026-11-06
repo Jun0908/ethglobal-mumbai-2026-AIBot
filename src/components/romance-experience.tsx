@@ -3,7 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import {beats,chapters,type RomanceState} from '@/lib/romance-story';
 import {characterArt} from '@/lib/character-art';
 import type {Locale} from '@/lib/i18n';
-type PublicState=Omit<RomanceState,'receipts'>;
+type PublicState=Omit<RomanceState,'receipts'|'practiceBase'>&{practice:boolean};
 export default function RomanceExperience({locale,onHome}:{locale:Locale;onHome:()=>void}){
  const [state,setState]=useState<PublicState|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[text,setText]=useState(''),[history,setHistory]=useState(false),[journal,setJournal]=useState(false),[deleting,setDeleting]=useState(false),[fallback,setFallback]=useState(false);
  const sending=useRef(false),pending=useRef<{key:string;id:string}|null>(null),reply=useRef<HTMLDivElement>(null);
@@ -25,6 +25,7 @@ export default function RomanceExperience({locale,onHome}:{locale:Locale;onHome:
  {error&&<div className="alert" role="alert">{error} <button onClick={()=>void send('get')}>{p('続きを読み直す','Reload story')}</button></div>}
  {!state?<p role="status">{p('物語を読み込んでいます…','Loading your story…')}</p>:<>
  <p className="eyebrow">{p(`第${chapter+1}話`, `CHAPTER ${chapter+1}`)} · {chapters[chapter][locale]}</p>
+ {state.practice&&<p role="status">{p('別の選び方を試しています。本編の記録は残っています。','Trying a different path. Your original story is saved.')} <button disabled={busy} onClick={()=>void send('restore')}>{p('本編へ戻る','Return to original story')}</button></p>}
  <div className={`romance-stage emotion-${emotion} chapter-${chapter}`}>
  {emotion==='happy'?<img className="romance-portrait" src={characterArt('Mira').src} alt={p('楽しそうに笑うMira','Mira smiling warmly')}/>:<div className={`romance-expression expression-${emotion}`} role="img" aria-label={feeling}/>}
  <div className="romance-caption"><p>{scene?.scene[locale]}</p><span>{feeling}</span></div>
@@ -42,6 +43,8 @@ export default function RomanceExperience({locale,onHome}:{locale:Locale;onHome:
  {(['pace','activities','closeness','differences'] as const).map((dimension,index)=>{const memories=state.memories.filter(m=>m.dimension===dimension);return <article key={dimension}><h3>{[p('会話のペース','Conversation pace'),p('一緒に過ごす時間','Time together'),p('距離の取り方','Closeness'),p('違い・支え方','Differences & support')][index]}</h3>{!memories.length?<p>{p('まだ判断に必要な言葉がありません。','There is not enough evidence yet.')}</p>:memories.map(m=><div key={m.id}><strong>{m.observation==='aligned'?p('共通する希望があった','A shared wish'):p('違いが見えた','A difference emerged')}</strong><p className="small">{p('この場面での返答。恒常的な性格や恋愛の成功を示しません。','A reply in this scene, not a lasting trait or prediction.')}</p>{[m.playerId,m.partnerId].map(id=>{const source=state.messages.find(v=>v.id===id);return source&&<button className="evidence-quote" key={id} onClick={()=>{setHistory(true);setTimeout(()=>document.getElementById(`romance-${id}`)?.scrollIntoView({block:'center'}),0);}}><small>{source.role==='user'?p('あなた','You'):'Mira'}</small>“{source.text}”</button>;})}<button className="link-button" disabled={busy} onClick={()=>void send('forget',{memoryId:m.id})}>{p('この記録と根拠を削除する','Remove this memory and its evidence')}</button></div>)}</article>;})}
  <h3>{p('二人の思い出','Shared memories')}</h3>{state.memories.filter(m=>!m.dimension).map(m=><p key={m.id}>✦ {state.messages.find(v=>v.id===m.playerId)?.text} <button className="link-button" disabled={busy} onClick={()=>void send('forget',{memoryId:m.id})}>{p('削除','Remove')}</button></p>)}
  <p>{p('相手に合わせすぎたと感じたら、その感覚も大切にしてください。違いがあるまま関係を続けられます。','Your own comfort matters too. Different preferences can coexist with a growing relationship.')}</p>
+ <div role="group" aria-label={p('あなた自身の感想（任意）','Your own experience (optional)')}><p>{p('あなた自身はどう感じた？（任意）','How did it feel to you? (optional)')}</p>{(['natural','effort','unsure'] as const).map((value,index)=><button className="button secondary" key={value} aria-pressed={state.feeling===value} disabled={busy} onClick={()=>void send('feeling',{feeling:value})}>{[p('自然体で話せた','Felt natural'),p('少し気を使った','Took some effort'),p('まだ分からない','Not sure yet')][index]}</button>)}</div>
+ {!state.practice&&<button className="button secondary" disabled={busy} onClick={()=>void send('practice')}>{p('本編を残して別の選び方を試す','Try another path and keep this story')}</button>}
  <p className="small">{p('記録は同じブラウザで最終利用から30日保持されます。Cookieを削除した場合は復元できません。','Records last 30 days after your last visit in this browser. Clearing cookies prevents recovery.')}</p><button className="link-button" disabled={busy} onClick={()=>setDeleting(true)}>{p('記録を削除して最初から始める','Delete this record and start over')}</button>{deleting&&<div role="alert"><p>{p('会話・思い出・進行をすべて削除します。','This removes all conversation, memories and progress.')}</p><button disabled={busy} onClick={()=>void send('delete')}>{p('削除して始める','Delete and begin')}</button><button onClick={()=>setDeleting(false)}>{p('戻る','Cancel')}</button></div>}
  </section>}
  </>}

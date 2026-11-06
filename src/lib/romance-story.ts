@@ -20,7 +20,7 @@ export const beats: Beat[] = [
  {scene:c('カップが空になる。Miraが今度は自分から椅子を近づける。','The cups are empty. This time Mira moves her chair a little closer.'),line:c('写真展に出したら、一緒に見に来てほしい。写真の感想も、そのあと何を食べるかも、あなたと話したい。','If I enter the exhibition, I would like you to come with me. I want to talk with you about the pictures—and what to eat afterward.'),options:[o('行こう。僕もまた会いたい。','Let us go. I want to see you again too.','うれしい。次は雨宿りの偶然じゃなくて、ちゃんと待ち合わせね。','I am glad. Next time we will meet on purpose, not by chance in the rain.','shy'),o('一緒に行こう。食べる場所は僕が提案するね。','Let us go. I will suggest somewhere to eat.','じゃあ私は写真係、あなたはお店係。好きなもの、交換できそう。','Then I handle pictures and you handle food. We can share what we love.'),o('大切な話をありがとう。今は友達として会いたい。','Thank you for sharing this. I would like to meet as friends for now.','伝えてくれてありがとう。その距離で、一緒に見られたらうれしい。','Thank you for telling me. I would be happy to see it with you at that distance.','neutral','closeness','different')]},
 ];
 export type RomanceMessage = {id:string;role:'user'|'assistant';text:string;locale:Locale;beat:number};
-export type RomanceState = {version:1;revision:number;step:number;paused:boolean;emotion:Option['emotion'];messages:RomanceMessage[];memories:{id:string;beat:number;playerId:string;partnerId:string;label:Copy;dimension?:Option['dimension'];observation?:Option['observation']}[];receipts:Record<string,string>;updatedAt:number};
+export type RomanceState = {version:1;revision:number;step:number;paused:boolean;emotion:Option['emotion'];messages:RomanceMessage[];memories:{id:string;beat:number;playerId:string;partnerId:string;label:Copy;dimension?:Option['dimension'];observation?:Option['observation']}[];receipts:Record<string,string>;updatedAt:number;feeling?:'natural'|'effort'|'unsure';practiceBase?:RomanceState};
 export function newRomance(locale:Locale):RomanceState {return {version:1,revision:0,step:0,paused:false,emotion:'happy',messages:[{id:crypto.randomUUID(),role:'assistant',text:beats[0].line[locale],locale,beat:0}],memories:[],receipts:{},updatedAt:Date.now()};}
 export function chooseRomance(state:RomanceState,index:number,locale:Locale,playerText?:string) {
  if(state.paused || state.step>=beats.length) throw new Error('Scene is not active');
@@ -38,5 +38,14 @@ export function resumeChapter(state:RomanceState,locale:Locale) {
  const previous=next.memories.find(m=>m.beat===(next.step===4?1:5));
  const quote=previous && next.messages.find(m=>m.id===previous.playerId);
  const callback=quote ? (locale==='ja'?`前に「${quote.text}」って話してくれたね。覚えてるよ。 `:`You said “${quote.text}” last time. I remember. `):'';
- next.messages.push({id:crypto.randomUUID(),role:'assistant',text:callback+beats[next.step].line[locale],locale,beat:next.step});return next;
+ const adjusted=previous?.observation==='different'?(next.step===4?c('今日は返事を急かさないから、ゆっくり歩こう。','I will give you time to answer today. Let us walk slowly.'):c('今日は予定を決めておいたよ。帰り道の変更も、先に相談するね。','I planned our time today. I will ask before changing our route.')):previous?.observation==='aligned'?(next.step===4?c('今日はお互い、思いついたことを話しながら歩こう。','Today we can chat as thoughts come while we walk.'):c('写真を見たあと、気になる道があったら一緒に考えよう。','After the photos, we can decide together if a lane catches our eye.')):null;
+ next.emotion='happy';next.messages.push({id:crypto.randomUUID(),role:'assistant',text:callback+(adjusted?adjusted[locale]+' ':'')+beats[next.step].line[locale],locale,beat:next.step});return next;
+}
+export function allowedFreeIntent(step:number,text:string,index:number|undefined,locale:Locale){
+ if(index===undefined || !beats[step]?.options[index])return undefined;
+ const normalize=(value:string)=>value.trim().replace(/[。.!！?？\s]/g,'').toLowerCase();
+ if(normalize(text)===normalize(beats[step].options[index].label[locale]))return index;
+ // A side question must not consume a story decision, even if the model finds it related.
+ if(/[?？]|どこ|どんな|いつ|なぜ|どうして|どの|何[をがにで]/.test(text)||/^(what|where|when|why|how|can you|could you|do you|would you|is |are )/i.test(text.trim()))return undefined;
+ return index;
 }
