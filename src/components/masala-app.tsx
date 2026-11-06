@@ -50,6 +50,7 @@ export default function MasalaApp() {
   const [feedbackConsent, setFeedbackConsent] = useState(false);
   const [finalConsent, setFinalConsent] = useState(false);
   const [personaId, setPersonaId] = useState("");
+  const [personaIds, setPersonaIds] = useState<string[]>([]);
   const [game, setGame] = useState<PublicGame | null>(null);
   const [partner, setPartner] = useState("Asha");
   const [message, setMessage] = useState("");
@@ -60,6 +61,7 @@ export default function MasalaApp() {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => { fetch("/api/config").then(async response => { const data = await response.json(); if (!response.ok) throw new Error(data.error); setConfig(data); }).catch(() => setError("設定を読み込めません。ページを再読み込みしてください。")); }, []);
+  useEffect(() => { fetch("/api/session").then(async response => { if (!response.ok) return; const data = await response.json() as { ready: boolean; personaIds: string[] }; if (data.ready) { setReady(true); setAdult(true); setPersonaIds(data.personaIds); setPersonaId(data.personaIds[0] || ""); } }).catch(() => {}); }, []);
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [game?.messages, busy]);
   useEffect(() => { if (privacy) dialogRef.current?.showModal(); else dialogRef.current?.close(); }, [privacy]);
   useEffect(() => { window.scrollTo({ top: 0, behavior: "instant" }); }, [view]);
@@ -104,10 +106,10 @@ export default function MasalaApp() {
   }); }
   function approve() { if (draft && finalConsent) void run(async () => {
     const result = await post<{ personaId: string }>("persona/approve", { draftId: draft.draftId, simulationApproved: true, examplesApproved: true, adultConfirmed: true });
-    setPersonaId(result.personaId); setView("approved"); setDraft(null); setProposal(null); setAnswers([]); setFeedback("");
+    setPersonaId(result.personaId); setPersonaIds(current => [result.personaId, ...current]); setView("approved"); setDraft(null); setProposal(null); setAnswers([]); setFeedback("");
   }); }
   function revoke() { if (personaId) void run(async () => {
-    await post("persona/revoke", { personaId }); setPersonaId(""); setGame(null); setView("home"); setDateResult("利用同意を撤回しました。このPersonaを使った以後の会話は停止されます。");
+    await post("persona/revoke", { personaId }); const remaining = personaIds.filter(id => id !== personaId); setPersonaIds(remaining); setPersonaId(remaining[0] || ""); setGame(null); setView("home"); setDateResult("利用同意を撤回しました。このPersonaを使った以後の会話は停止されます。");
   }); }
   async function sendMessage() {
     if (!game || !message.trim()) return;
@@ -144,7 +146,7 @@ export default function MasalaApp() {
         <section className="journey-strip"><span className="eyebrow">LESS SWIPING.<br/>MORE CONNECTING.</span><div><span>01</span><p>Tell your story<small>会話から、あなたらしさを。</small></p></div><div><span>02</span><p>Make it yours<small>自分で確かめ、整える。</small></p></div><div><span>03</span><p>See what brews<small>自由に話して、違いを楽しむ。</small></p></div></section>
         <section className="meet-section"><div className="section-heading"><div><p className="eyebrow">TWO PERSONALITIES. YOUR CONVERSATION.</p><h2>まずは、会ってみよう。</h2></div><p className="muted small">{config?.demoMode ? "架空の成人Persona・実際の相手ではありません" : "認証済みのマッチから開始してください"}<br/>{provider}</p></div>
           {config?.demoMode ? <div className="persona-cards">{[{ id: "demo-calm", name: "Asha", label: "THE THOUGHTFUL ONE", desc: "静かな場所と、ゆっくり深まる会話が好き。", tags: ["穏やか", "思慮深い", "ゆっくり"] }, { id: "demo-playful", name: "Mira", label: "THE SPONTANEOUS ONE", desc: "冗談と、予定になかった小さな冒険が好き。", tags: ["遊び心", "好奇心", "自然体"] }].map((p, i) => <article className={`persona-card persona-${i}`} key={p.id}><div className="portrait-small"><img src="/chai-date.png" alt="架空の成人キャラクター。デモ2名は同じイラストを使用"/></div><div><p className="eyebrow">{p.label}</p><h3>{p.name} <small>27 · DEMO</small></h3><p>{p.desc}</p><div className="tags">{p.tags.map(tag => <span key={tag}>{tag}</span>)}</div></div><button className="round-button" aria-label={`${p.name}と話す`} disabled={busy || !adult} onClick={() => startGame(p.id, p.name)}>↗</button></article>)}</div> : <div className="panel l--stack -g:15"><p>PSI連携元で本人確認を済ませ、マッチ情報を入力してください。</p><label>Match ID<input value={matchId} onChange={e => setMatchId(e.target.value)}/></label><label>Agent Persona ID<input value={matchPersonaId} onChange={e => setMatchPersonaId(e.target.value)}/></label><button className="button primary" disabled={!adult || busy || !matchId || !matchPersonaId} onClick={() => startGame(matchPersonaId, "Match")}>マッチしたAIと話す</button></div>}
-          {personaId && <div className="owned-persona"><span>あなたの承認済みPersonaがあります。</span>{config?.demoMode && <button className="link-button" disabled={busy} onClick={() => startGame(personaId, "Your AI")}>自分のAIと話す →</button>}<button className="link-button danger" disabled={busy} onClick={revoke}>利用同意を撤回</button></div>}
+          {personaId && <div className="owned-persona"><label>あなたの承認済みPersona <select aria-label="承認済みPersonaを選ぶ" value={personaId} onChange={e => setPersonaId(e.target.value)} disabled={busy}>{personaIds.map((id, i) => <option value={id} key={id}>Persona {personaIds.length - i}</option>)}</select></label>{config?.demoMode && <button className="link-button" disabled={busy} onClick={() => startGame(personaId, "Your AI")}>自分のAIと話す →</button>}<button className="link-button danger" disabled={busy} onClick={revoke}>利用同意を撤回</button></div>}
           {dateResult && <p className="notice" role="status">{dateResult}</p>}
         </section>
       </>}

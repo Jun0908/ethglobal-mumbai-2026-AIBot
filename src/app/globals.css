@@ -97,6 +97,7 @@
   .alert button { border: 0; background: none; font-size: 23px; padding-left: 20px; }
   .notice { background: #eef1e5; border: 1px solid #c7cfb4; padding: 14px; border-radius: 5px; margin-top: 15px; }
   .owned-persona { display: flex; align-items: center; flex-wrap: wrap; gap: 20px; font-size: 12px; padding: 25px 0 0; }
+  .owned-persona select { padding: 5px 10px; margin-left: 10px; background: #f5f4e9; border: 1px solid var(--line); border-radius: 4px; }
   .workspace, .game-workspace { margin: 42px 5vw 60px; }
   .workspace-heading { text-align: center; margin: 0 0 35px; }
   .workspace-heading h2 { font-size: clamp(26px, 3vw, 40px); margin: 16px 0; }

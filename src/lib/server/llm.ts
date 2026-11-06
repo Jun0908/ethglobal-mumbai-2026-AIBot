@@ -18,8 +18,10 @@ async function generate<T>(schema: z.ZodType<T>, name: string, instructions: str
     });
     if (response.status !== "completed" || !response.output_parsed) throw new Error("Incomplete output");
     return schema.parse(response.output_parsed);
-  } catch {
+  } catch (error) {
     // Provider error bodies may contain submitted text. Do not log or expose them.
+    if (error instanceof OpenAI.APIError && error.status === 401) throw new ApiError(502, "OpenAI APIキーが拒否されました。.envのOPENAI_API_KEYを確認し、サーバーを再起動してください。");
+    if (error instanceof OpenAI.APIError && error.status === 429) throw new ApiError(503, "OpenAIの利用上限・残高を確認してください。しばらく待ってから再試行できます。");
     throw new ApiError(502, "AIから有効な応答を受け取れませんでした。設定や利用上限を確認し、再試行してください。");
   }
 }

@@ -16,7 +16,7 @@ export const capsuleSchema = z.object({
 });
 export type Capsule = z.infer<typeof capsuleSchema>;
 export type Draft = { id: string; ownerId: string; content: PersonaContent; expiresAt: number };
-export type Identity = { ownerId: string; subject: string | null; expiresAt: number };
+export type Identity = { ownerId: string; subject: string | null; expiresAt: number; personaIds: string[] };
 type State = {
   identities: Map<string, Identity>; drafts: Map<string, Draft>; games: Map<string, Game>;
   limits: Map<string, { count: number; until: number }>; locks: Set<string>;

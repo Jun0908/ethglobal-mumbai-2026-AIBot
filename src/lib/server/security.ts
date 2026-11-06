@@ -54,7 +54,7 @@ export function createIdentity(request: NextRequest, assertion?: string) {
   if (existing && !assertion) return { identity: existing, token: previous! };
   const subject = isDemo() ? null : verifyAssertion(assertion || "");
   const token = randomBytes(32).toString("base64url");
-  const session = { ownerId: subject ? `psi:${subject}` : randomBytes(24).toString("base64url"), subject, expiresAt: Date.now() + 8 * 60 * 60_000 };
+  const session = { ownerId: subject ? `psi:${subject}` : randomBytes(24).toString("base64url"), subject, expiresAt: Date.now() + 8 * 60 * 60_000, personaIds: [] as string[] };
   state.identities.set(token, session);
   if (previous) state.identities.delete(previous);
   return { identity: session, token };

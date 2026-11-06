@@ -67,6 +67,7 @@ async function dispatch(path: string, body: unknown, person: Identity) {
         ensureNoPrivateText(draft.content);
         const capsule: Capsule = { personaId: randomUUID(), ownerId: person.ownerId, version: 1, content: draft.content, boundaries: { revealPrivateInformation: false, allowSensitiveQuestions: false }, consent: { simulationApproved: true, approvedAt: new Date().toISOString() } };
         await saveCapsule(capsule);
+        person.personaIds = [capsule.personaId, ...(person.personaIds ?? [])];
         state.drafts.delete(draft.id);
         return { personaId: capsule.personaId, approved: true };
       });
@@ -79,6 +80,7 @@ async function dispatch(path: string, body: unknown, person: Identity) {
         capsule.consent.simulationApproved = false;
         capsule.version += 1;
         await saveCapsule(capsule);
+        person.personaIds = (person.personaIds ?? []).filter(id => id !== capsule.personaId);
         for (const [id, draft] of state.drafts) if (draft.ownerId === person.ownerId) state.drafts.delete(id);
         return { revoked: true };
       });
@@ -140,6 +142,10 @@ async function dispatch(path: string, body: unknown, person: Identity) {
   }
 }
 export async function GET(request: NextRequest) {
+  if (request.nextUrl.pathname === "/api/session") {
+    try { const person = identity(request); return json({ ready: true, personaIds: person.personaIds ?? [] }); }
+    catch { return json({ ready: false }, 401); }
+  }
   if (request.nextUrl.pathname !== "/api/config") return json({ error: "Not found" }, 404);
   try { return json({ demoMode: isDemo(), llmMode: llmMode(), provider: llmMode() === "openai" ? "OpenAI API" : "ローカルの定型応答（LLM未使用）" }); }
   catch { return json({ error: "サーバーのAI設定を確認してください。" }, 503); }
