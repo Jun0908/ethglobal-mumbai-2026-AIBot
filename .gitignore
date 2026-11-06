@@ -1,0 +1,22 @@
+# Local secrets and runtime data
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+/.data/
+/data/private/
+
+# Dependencies and generated output
+node_modules/
+.next/
+out/
+dist/
+coverage/
+*.tsbuildinfo
+*.log
+
+# Local tooling
+.vercel/
+.DS_Store
+Thumbs.db
