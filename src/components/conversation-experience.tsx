@@ -9,11 +9,11 @@ import CafeScene from "./cafe-scene";
 import { cafeStages, cafeTitles } from "@/lib/cafe-adventure";
 
 export type ConversationTarget = { id: string; matchId: string };
-type Props = { locale: Locale; demo: boolean; initialTarget: ConversationTarget | null; onHome: () => void; onBusyChange: (busy: boolean) => void };
+type Props = { locale: Locale; demo: boolean; initialTarget: ConversationTarget | null; onHome: () => void; onBusyChange: (busy: boolean) => void; onMira?: () => void };
 const dimensions = { pace: ["会話のペース", "Conversation pace"], activities: ["過ごし方", "Time together"], closeness: ["距離の縮め方", "Getting closer"], differences: ["違いへの向き合い方", "Handling differences"] };
 const observations = { aligned: ["合う傾向", "Shared preference"], different: ["違いが見えた", "Different preferences"], adapted: ["歩み寄れた", "Found a compromise"], mixed: ["複数の傾向", "Mixed evidence"], unknown: ["まだ分からない", "Not enough evidence"] };
 
-export default function ConversationExperience({ locale, demo, initialTarget, onHome, onBusyChange }: Props) {
+export default function ConversationExperience({ locale, demo, initialTarget, onHome, onBusyChange, onMira }: Props) {
   const pick = (ja: string, en: string) => locale === "en" ? en : ja;
   const label = (pair: string[]) => pair[locale === "en" ? 1 : 0];
   const [sessions, setSessions] = useState<ConversationSummary[]>([]);
@@ -124,9 +124,9 @@ export default function ConversationExperience({ locale, demo, initialTarget, on
     {!current ? <>
       <header className="conversation-heading"><p className="eyebrow">MEET. TALK. DISCOVER.</p><h2>{pick("誰と、もう少し話したい？", "Who would you like to know better?")}</h2><p>{pick("会話から、合うところも違うところも見つけよう。まだ話していない相手との相性は分かりません。", "Discover shared preferences and differences through conversation. Untalked-to companions have no compatibility assessment.")}</p></header>
       {!loaded && <p role="status">{pick("会話を読み込んでいます…", "Loading conversations…")}</p>}
-      {demo && <div className="companion-grid">{[{ id: "demo-calm", name: "Asha", intro: pick("静かな時間と、ゆっくり深まる会話。", "Quiet moments and conversations that deepen slowly."), tag: "THE THOUGHTFUL ONE" }, { id: "demo-playful", name: "Mira", intro: pick("お互いのチャイを選ぼう。会話の選択で、ふたりの思い出が変わるデート。", "Choose chai for each other. Your replies shape a rainy-day keepsake."), tag: "THE SPONTANEOUS ONE" }].map(p => {
+      {demo && <div className="companion-grid">{[{ id: "demo-calm", name: "Asha", intro: pick("静かな時間と、ゆっくり深まる会話。", "Quiet moments and conversations that deepen slowly."), tag: "THE THOUGHTFUL ONE" }, { id: "demo-playful", name: "Mira", intro: pick("写真好きのMiraと出会う３話の物語。会話を重ねて、合うところも違うところも見つけよう。", "Meet Mira in three connected chapters. Discover shared wishes and differences."), tag: "THE SPONTANEOUS ONE" }].map(p => {
         const session = sessions.find(s => s.partnerRef === p.id);
-        return <article className={`companion-tile ${p.id}`} key={p.id}><img className="companion-portrait" src={characterArt(p.id).src} style={{ objectPosition: characterArt(p.id).position }} alt={pick(`${p.name}のイメージ・架空の成人`, `${p.name}, a fictional adult companion`)}/><span className="eyebrow">{p.tag}</span><h3>{p.name}</h3><p>{p.intro}</p><p className="small">{session ? session.report ? pick("振り返りあり", "Reflection available") : pick("会話中", "Conversation started") : pick("未会話・相性は未確認", "Not yet talked · no assessment")}</p><button className="button primary" disabled={busy} onClick={() => void open({ id: p.id, matchId: "demo-match" })}>{session ? pick("続きから話す", "Continue talking") : p.id === "demo-playful" ? pick("チャイデートを遊ぶ", "Play the chai date") : pick("話してみる", "Start talking")} →</button><small>{pick("架空の成人キャラクター", "Fictional adult companion")}</small></article>;
+        return <article className={`companion-tile ${p.id}`} key={p.id}><img className="companion-portrait" src={characterArt(p.id).src} style={{ objectPosition: characterArt(p.id).position }} alt={pick(`${p.name}のイメージ・架空の成人`, `${p.name}, a fictional adult companion`)}/><span className="eyebrow">{p.tag}</span><h3>{p.name}</h3><p>{p.intro}</p><p className="small">{session ? session.report ? pick("振り返りあり", "Reflection available") : pick("会話中", "Conversation started") : pick("未会話・相性は未確認", "Not yet talked · no assessment")}</p><button className="button primary" disabled={busy} onClick={() => p.id === "demo-playful" && onMira ? onMira() : void open({ id: p.id, matchId: "demo-match" })}>{session ? pick("続きから話す", "Continue talking") : p.id === "demo-playful" ? pick("Miraとの物語を遊ぶ", "Play Mira’s story") : pick("話してみる", "Start talking")} →</button><small>{pick("架空の成人キャラクター", "Fictional adult companion")}</small></article>;
       })}</div>}
       <section className="comparison-section"><h3>{pick("ふたりとの会話を比べる", "Compare your conversations")}</h3><p className="small muted">{pick("各相手との最新のデートを、同じ4つの観点で見比べます。会話量の違いも確認してください。", "Compare the latest date with each companion across four dimensions. Consider the different amounts of conversation too.")}</p>
         <div className="comparison-grid">{(demo ? ["demo-calm", "demo-playful"] : latestPerPartner.map(s => s.partnerRef)).map(ref => {

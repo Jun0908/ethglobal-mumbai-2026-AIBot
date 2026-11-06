@@ -27,7 +27,8 @@ export async function POST(request:NextRequest){
  if(input.op==='next'){if(!state.paused||state.step>=12)throw new ApiError(409,'No next chapter');state=resumeChapter(state,locale);}
  if(input.op==='forget'){
  const memory=state.memories.find(m=>m.id===input.memoryId);if(!memory)throw new ApiError(404,'Memory not found');
- const ids=[memory.playerId,memory.partnerId];state.memories=state.memories.filter(m=>m.id!==memory.id);state.messages=state.messages.filter(m=>!ids.includes(m.id));state.revision++;
+ const ids=[memory.playerId,memory.partnerId];const forgotten=state.messages.find(m=>m.id===memory.playerId)?.text;
+ state.memories=state.memories.filter(m=>m.id!==memory.id);state.messages=state.messages.filter(m=>!ids.includes(m.id)&&!(forgotten&&m.role==='assistant'&&m.text.includes(forgotten)));state.revision++;
  }
  if(input.op==='reply'){
  if(Number(input.option!==undefined)+Number(!!input.message)!==1)throw new ApiError(400,'Choose a reply or send text');
