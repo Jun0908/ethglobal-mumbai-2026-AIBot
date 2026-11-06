@@ -10,7 +10,8 @@
     "test": "tsx --test tests/*.test.ts",
     "test:flow": "node --env-file-if-exists=.env scripts/check-flow.mjs",
     "test:security": "node scripts/check-security.mjs",
-    "test:live": "node scripts/check-live.mjs"
+    "test:live": "node scripts/check-live.mjs",
+    "test:languages": "node scripts/check-languages.mjs"
   },
   "dependencies": {
     "next": "16.4.5",

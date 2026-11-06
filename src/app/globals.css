@@ -25,6 +25,12 @@
   .header-nav button { background: none; border: 0; padding: 12px 0; font-size: 12px; color: var(--muted); }
   .header-nav .nav-active { color: var(--ink); border-bottom: 1px solid var(--orange); }
   .header-note { display: flex; align-items: center; gap: 8px; font-size: 9px; letter-spacing: .12em; color: var(--muted); }
+  .header-tools { display: flex; align-items: center; gap: 20px; }
+  .language-switch { display: flex; padding: 3px; border: 1px solid #d2d6c5; background: #f0f0e5; border-radius: 24px; flex-shrink: 0; }
+  .language-switch button { border: 0; background: transparent; color: var(--muted); padding: 5px 10px; min-width: 35px; min-height: 30px; font-size: 10px; font-weight: 700; border-radius: 20px; }
+  .language-switch button[aria-pressed="true"] { background: var(--olive); color: #fffdf4; }
+  html[lang="en"] .hero-jp { letter-spacing: .01em; }
+  html[lang="en"] .adult-check { font-size: 11px; }
   .header-note i, .partner-online i { display: inline-block; background: var(--olive); width: 6px; height: 6px; border-radius: 50%; }
   .hero { display: grid; grid-template-columns: .94fr 1.06fr; padding: 56px 5vw 45px; gap: 5vw; align-items: center; }
   .hero-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; padding: 15px 0; }
@@ -221,7 +227,7 @@
     .game-heading { flex-direction: column; align-items: flex-start; }
   }
   @media (max-width: 760px) {
-    .site-header { min-height: 86px; gap: 15px; }
+    .site-header { min-height: 86px; gap: 10px; }
     .header-nav { gap: 15px; }
     .header-nav button { font-size: 10px; }
     .header-nav button:nth-child(2) { display: none; }
@@ -281,5 +287,6 @@
     .privacy-dialog h2 { font-size: 26px; }
     .success-page h2 { font-size: 30px; }
   }
+  @media (max-width: 430px) { .header-nav button:first-child { display: none; } .header-tools { gap: 0; } .header-nav { margin-left: auto; } }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 }
