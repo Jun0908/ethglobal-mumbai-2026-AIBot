@@ -303,3 +303,53 @@
   @media (max-width: 430px) { .header-nav button:first-child { display: none; } .header-tools { gap: 0; } .header-nav { margin-left: auto; } }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 }
+
+@layer masala {
+  button.answer-option { width: 100%; justify-content: space-between; color: var(--ink); background: #fffdf8; text-align: left; }
+  button.answer-option:hover, button.answer-option.selected { background: #edf0e3; border-color: var(--olive); }
+  button:focus-visible, summary:focus-visible { outline: 3px solid var(--orange); outline-offset: 4px; }
+  .rain-game { margin-inline: 5vw; padding: 35px 0 50px; }
+  .rain-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+  .rain-heading h2 { font-size: clamp(26px, 3vw, 40px); margin-top: 12px; line-height: 1.5; }
+  .rain-heading h2:focus { outline: none; }
+  .rain-progress { border: 1px solid var(--line); padding: 8px 16px; border-radius: 30px; white-space: nowrap; font-size: 12px; }
+  .rain-intro { margin: 10px 0 28px; font-size: 13px; color: var(--muted); }
+  .rain-layout { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1fr); gap: 30px; align-items: start; }
+  .rain-game .date-stage { height: 360px; }
+  .rain-game .date-stage > img { object-position: 75% 35%; }
+  .rain-reaction { padding: 20px 24px; margin-top: 15px; border: 1px solid var(--line); border-radius: 14px; background: #fffdf8; }
+  .rain-reaction > p { margin-top: 8px; font-size: 15px; line-height: 1.9; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .rain-outcome { background: #edf0e3; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px; }
+  .rain-outcome p { margin-top: 8px; font-size: 14px; }
+  .rain-situation { font-size: 17px; line-height: 1.9; margin: 0 0 22px; }
+  .rain-actions { display: grid; gap: 12px; }
+  .rain-actions button { display: flex; align-items: center; gap: 18px; width: 100%; padding: 20px; border: 1px solid var(--line); border-radius: 14px; text-align: left; background: #fffdf8; color: var(--ink); transition: background .2s, border-color .2s; }
+  .rain-actions button:hover { background: #edf0e3; border-color: var(--olive); }
+  .rain-actions button > span:nth-child(2) { flex: 1; }
+  .rain-actions strong { display: block; font-size: 17px; font-weight: 600; }
+  .rain-actions small { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; }
+  .action-number { font-family: Georgia, serif; font-size: 24px; color: var(--orange); }
+  .rain-chat-toggle { margin-top: 22px; }
+  .rain-chat { margin-top: 15px; padding: 20px; border: 1px solid var(--line); border-radius: 12px; }
+  .rain-ending { background: #fffdf8; border: 1px solid var(--line); border-radius: 18px; padding: 28px; }
+  .rain-ending h3 { font-size: 24px; }
+  .rain-ending ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 18px; }
+  .rain-ending li { padding-left: 15px; border-left: 3px solid var(--olive); }
+  .rain-ending li small { font-weight: 600; color: var(--olive); }
+  .rain-ending li p { margin-top: 5px; font-size: 14px; }
+  .rain-history { margin-top: 25px; padding-top: 20px; border-top: 1px solid var(--line); }
+  .rain-history summary, .approved-history summary { cursor: pointer; font-size: 13px; }
+  .rain-history p { padding: 10px 0; font-size: 13px; overflow-wrap: anywhere; }
+  @media (max-width: 700px) {
+    .rain-game { padding-top: 22px; }
+    .rain-heading { align-items: flex-start; flex-direction: column; gap: 10px; }
+    .rain-layout { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+    .rain-game .date-stage { height: 230px; }
+    .rain-game .scene-caption { bottom: 15px; }
+    .rain-game .scene-caption h3 { margin: 5px 0; }
+    .rain-reaction { padding: 16px; }
+    .rain-actions button { padding: 16px; gap: 12px; }
+    .rain-actions strong { font-size: 16px; }
+    .rain-ending { padding: 20px; }
+  }
+}

@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { scenes, type Message } from "@/lib/game";
+import type { Message } from "@/lib/game";
+import type { RainStory } from "@/lib/rain-story";
+import RainGame from "./rain-game";
 import { interviewQuestions, scenarios, type Answer, type Dialogue, type PersonaContent } from "@/lib/schemas";
 import { readLocale, translate, type Locale } from "@/lib/i18n";
 import { INTERVIEW_LIMIT, interviewOptions, interviewProgress, type InterviewNext } from "@/lib/interview";
@@ -14,17 +16,17 @@ type Draft = {
     content: PersonaContent;
 };
 type PublicGame = {
+    story?: RainStory;
     id: string;
     scene: number;
     sceneTurns: number;
     completed: boolean;
     messages: Message[];
     emotion: Dialogue["emotion"];
-    event: string;
+    event: Dialogue["conversationEvent"];
 };
 type View = "home" | "interview" | "calibrate" | "approved" | "game";
 const labels: Record<string, string> = { socialStyle: "会話のスタイル", humor: "ユーモア", values: "大切にすること", relationshipPace: "関係のペース", tone: "話し方", sentenceLength: "文章の長さ", asksFollowUpQuestions: "自然に質問する", handlesSilence: "沈黙への対応", initialReaction: "意見が違ったとき", repairStyle: "すれ違いの解き方" };
-const emotionLabels = { neutral: "穏やか", happy: "うれしい", shy: "少し照れている", surprised: "びっくり", troubled: "考え中" };
 async function postRequest<T>(path: string, body: unknown, locale: Locale): Promise<T> {
     const response = await fetch(`/api/${path}`, { method: "POST", headers: { "Content-Type": "application/json", "X-Masala-Language": locale }, body: JSON.stringify(body), signal: AbortSignal.timeout(65000) });
     const data = await response.json();
@@ -58,10 +60,12 @@ export default function MasalaApp() {
     const [adult, setAdult] = useState(false);
     const [ready, setReady] = useState(false);
     const [busy, setBusy] = useState(false);
+    const busyRef = useRef(false);
     const [error, setError] = useState("");
     const [privacy, setPrivacy] = useState(false);
     const [answers, setAnswers] = useState<Answer[]>([]);
     const [skipped, setSkipped] = useState(0);
+    const [interviewHistory, setInterviewHistory] = useState<{ answers: Answer[]; skipped: number; question: string; options: string[] }[]>([]);
     const interview = interviewProgress(answers.length, skipped);
     const [question, setQuestion] = useState(interviewQuestions[0]);
     const [options, setOptions] = useState<string[]>([...interviewOptions[0]]);
@@ -78,12 +82,9 @@ export default function MasalaApp() {
     const [personaIds, setPersonaIds] = useState<string[]>([]);
     const [game, setGame] = useState<PublicGame | null>(null);
     const [partner, setPartner] = useState("Asha");
-    const [message, setMessage] = useState("");
     const [dateResult, setDateResult] = useState("");
     const [matchId, setMatchId] = useState("");
     const [matchPersonaId, setMatchPersonaId] = useState("");
-    const scrollRef = useRef<HTMLDivElement>(null);
-    const messageRef = useRef<HTMLTextAreaElement>(null);
     const dialogRef = useRef<HTMLDialogElement>(null);
     useEffect(() => {
         try { setLocale(readLocale(localStorage.getItem("masala-language"))); } catch { /* Storage may be disabled. */ }
@@ -105,25 +106,26 @@ export default function MasalaApp() {
         setPersonaIds(data.personaIds);
         setPersonaId(data.personaIds[0] || "");
     } }).catch(() => { }); }, []);
-    useEffect(() => { if (scrollRef.current)
-        scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [game?.messages, busy]);
     useEffect(() => { if (privacy)
         dialogRef.current?.showModal();
     else
         dialogRef.current?.close(); }, [privacy]);
     useEffect(() => { window.scrollTo({ top: 0, behavior: "instant" }); }, [view]);
     async function run(action: () => Promise<void>) {
-        if (busy)
-            return;
+        if (busyRef.current) return false;
+        busyRef.current = true;
         setBusy(true);
         setError("");
         try {
             await action();
+            return true;
         }
         catch (e) {
             setError(e instanceof Error ? e.message : t("処理を完了できませんでした。"));
+            return false;
         }
         finally {
+            busyRef.current = false;
             setBusy(false);
         }
     }
@@ -138,6 +140,7 @@ export default function MasalaApp() {
     function resetInterview() {
         setAnswers([]);
         setSkipped(0);
+        setInterviewHistory([]);
         setQuestion(interviewQuestions[0]);
         setOptions([...interviewOptions[0]]);
         setChoice(null);
@@ -153,24 +156,39 @@ export default function MasalaApp() {
     function startGame(target: string, name: string) {
         void run(async () => {
             await session();
-            const next = await post<PublicGame>("game/start", { matchId: config?.demoMode ? "demo-match" : matchId, agentPersonaId: target });
+            const next = await post<PublicGame>("game/start", { matchId: config?.demoMode ? "demo-match" : matchId, agentPersonaId: target, mode: "rain" });
             setGame(next);
             setPartner(name);
             setDateResult("");
-            setMessage("");
             setView("game");
         });
     }
-    async function answerQuestion() {
-        if (!answer.trim() || interview.finished)
+    async function answerQuestion(value = answer) {
+        if (!value.trim() || interview.finished)
             return;
-        const updated = [...answers, { question: t(question), summary: answer.trim() }];
+        const updated = [...answers, { question: t(question), summary: value.trim() }];
         await run(async () => {
             const next = await post<InterviewNext>("interview/next", { answers: updated, skipped, sendApproved: true });
+            setInterviewHistory(history => [...history, { answers, skipped, question, options }]);
             setAnswers(updated);
             setAnswer("");
             setChoice(null);
             if (!next.completed) { setQuestion(next.question); setOptions(next.options); }
+        });
+    }
+    function previousQuestion() {
+        const previous = interviewHistory.at(-1);
+        if (!previous || busy) return;
+        setAnswers(previous.answers); setSkipped(previous.skipped); setQuestion(previous.question); setOptions(previous.options);
+        setInterviewHistory(history => history.slice(0, -1)); setChoice(null); setAnswer(""); setError("");
+    }
+    function skipQuestion() {
+        void run(async () => {
+            const count = skipped + 1;
+            const next = await post<InterviewNext>("interview/next", { answers, skipped: count, sendApproved: true });
+            setInterviewHistory(history => [...history, { answers, skipped, question, options }]);
+            setSkipped(count); if (!next.completed) { setQuestion(next.question); setOptions(next.options); }
+            setChoice(null); setAnswer("");
         });
     }
     function finishInterview() {
@@ -221,21 +239,22 @@ export default function MasalaApp() {
                 setDateResult(t("利用同意を撤回しました。このPersonaを使った以後の会話は停止されます。"));
             });
     }
-    async function sendMessage() {
-        if (!game || !message.trim())
-            return;
-        const currentMessage = message;
-        await run(async () => {
-            const result = await post<{
-                game: PublicGame;
-                reply: Dialogue;
-            }>("game/message", { gameId: game.id, message: currentMessage });
+    async function sendStoryMessage(message: string) {
+        if (!game || !message.trim()) return false;
+        return run(async () => {
+            const result = await post<{ game: PublicGame; reply: Dialogue }>("game/message", { gameId: game.id, message });
             setGame(result.game);
-            setMessage("");
+        });
+    }
+    function chooseAction(choiceId: string) {
+        if (!game?.story) return;
+        const current = game;
+        void run(async () => {
+            const result = await post<{ game: PublicGame; reply: Dialogue }>("game/action", { gameId: current.id, choiceId, revision: current.story!.revision });
+            setGame(result.game);
         });
     }
     const provider = !config ? t("読み込み中") : config.llmMode === "openai" ? "OpenAI API" : t("ローカルの定型応答（LLM未使用）");
-    const scene = game ? scenes[game.scene] : scenes[0];
     return <div className="app-frame">
     <header className="site-header l--flex -ai:center -jc:between">
       <button className="brand" aria-label={t("ホームに戻る")} disabled={busy} onClick={() => { setView("home"); setError(""); }}><Cup /><span>love match<b>MASALA<span className="brand-dot">✳</span></b></span></button>
@@ -250,9 +269,9 @@ export default function MasalaApp() {
             <span className="location"><span>✳</span> MUMBAI, INDIA <span className="location-line"/> A NEW KIND OF MEET-CUTE</span>
             <h1>A little chai.<br />A little<br /><em>chemistry.</em></h1>
             <p className="hero-jp">{t("あなたらしさから、はじまる会話。")}</p>
-            <p className="hero-description">{t("AIとのデートで、会話の相性を体験するゲームです。カフェ・突然の雨・すれ違いの3シーンを各3往復で進め、最後に「もっと話したいか」を振り返ります。")}</p><p className="small">{t("すぐ遊ぶなら「チャイデートを始める」へ。自分のAIの作成は任意です。")}</p>
+            <p className="hero-description">{t("突然の雨で、デートの予定が変わった。3つの行動を選び、相手の反応を見ながら、ふたりだけの物語をつくろう。")}</p><p className="small">{t("すぐ遊ぶなら「雨の日のデートを遊ぶ」へ。自分のAIの作成は任意です。")}</p>
             <label className="check adult-check"><input type="checkbox" checked={adult} onChange={e => setAdult(e.target.checked)}/>{t("私は18歳以上で、AIとのシミュレーションであることを理解しています。")}</label>
-            <div className="hero-actions l--cluster -g:15"><button className="button primary" disabled={busy || !adult || !config || !config.demoMode} onClick={() => startGame("demo-calm", "Asha")}>{t("チャイデートを始める")}<span>↗</span></button><button className="button text-button" disabled={busy || !adult || !config} onClick={startInterview}>{t("自分のAIをつくる")}<span>→</span></button></div>
+            <div className="hero-actions l--cluster -g:15"><button className="button primary" disabled={busy || !adult || !config || !config.demoMode} onClick={() => startGame("demo-calm", "Asha")}>{t("雨の日のデートを遊ぶ")}<span>↗</span></button><button className="button text-button" disabled={busy || !adult || !config} onClick={startInterview}>{t("自分のAIをつくる")}<span>→</span></button></div>
             <p className="trust-note"><span>♧</span>{t("本人の承認から生まれるAI。秘密は、あなたのもの。")}</p>
           </div>
           <div className="hero-art"><img src="/chai-date.png" alt={t("ムンバイのカフェでチャイを手にする成人のオリジナルアニメキャラクター")}/><span className="art-corner">THE FIRST CHAI DATE</span><div className="art-caption"><span className="sun-mark">✺</span><div><p>Some connections<br />start with a conversation.</p><span>{t("ひとつの会話が、きっかけになる。")}</span></div></div><span className="art-stamp">LET IT<br /><b>brew.</b><span>♡</span></span></div>
@@ -269,18 +288,18 @@ export default function MasalaApp() {
         <div className="workspace-heading"><p className="eyebrow">01 / GETTING TO KNOW YOU</p><h2>{t("あなたの言葉で、")}<em>{t("あなたらしく。")}</em></h2><p className="muted">{t("正解はありません。会話するときの、いつものあなたを教えてください。")}</p></div>
         <div className="interview-grid"><aside className="sidebar l--stack -g:20"><Cup /><h3>A little conversation.</h3><p>{t("スキップを含めて最大6問で終了します。回答が1つあれば、途中でも次へ進めます。")}</p><div className="progress-label"><span>{t("質問の進み具合")}</span><b>{interview.completed} / {INTERVIEW_LIMIT}</b></div><progress aria-label={t("質問の進み具合")} value={interview.completed} max={INTERVIEW_LIMIT}/><p className="small">{t("送信した回答")}: {answers.length} · {t("スキップ")}: {skipped}</p><p className="small muted">{t("送信先：")}{provider}<br />{t("回答を送信すると、これまでの回答とともにAIが処理します。氏名・連絡先・住所は含めないでください。生回答全文は保存しません。")}</p><button className="link-button" onClick={() => setPrivacy(true)}>{t("情報の扱いを確認 →")}</button></aside>
         <div className="panel interview-panel l--stack -g:20">
-          <div className="approved-history">{answers.map((a, i) => <div className="history-answer" key={i}><span>{t("回答")}{i + 1}{t("· 送信済み")}</span><p>{a.summary}</p></div>)}</div>
+          {answers.length > 0 && <details className="approved-history"><summary>{t("これまでの回答を見る")}</summary>{answers.map((a, i) => <div className="history-answer" key={i}><span>{t("回答")}{i + 1}</span><p>{a.summary}</p></div>)}</details>}
           <div className="notice"><strong>{t("自分のAIをつくる準備です")}</strong><p>{t("① 最大6問 → ② AIの返答を確認 → ③ 承認して保存。デート体験だけなら、回答は不要です。")}</p>{config?.demoMode && <button className="link-button" disabled={busy} onClick={() => startGame("demo-calm", "Asha")}>{t("質問をやめて、デートを体験 →")}</button>}</div>
           {interview.finished ? <div className="interview-finished l--stack -g:15" role="status"><h3>{t("質問はこれで終了です")}</h3><p>{answers.length ? t("送信した回答からAIの下書きを作ります。次は返答を1つ試して、自分らしさを確認しましょう。") : t("すべてスキップしました。AIを作るには、少なくとも1つの回答が必要です。")}</p>{answers.length ? <button className="button primary" disabled={busy} onClick={finishInterview}>{t("次へ：自分のAIを確認 →")}</button> : <button className="button secondary" disabled={busy} onClick={resetInterview}>{t("質問をやり直す")}</button>}</div> : <>
           <p className="eyebrow">{t("質問")} {interview.completed + 1} / {INTERVIEW_LIMIT}</p>
           <div className="interviewer-message"><span className="mini-avatar"><Cup /></span><div><span className="eyebrow">AI INTERVIEWER</span><p>{t(question)}</p></div></div>
-          <fieldset className="answer-choices" disabled={busy}><legend>{t("回答を選んでください")}</legend>{options.map((option, index) => <label className={`answer-option ${choice === index ? "selected" : ""}`} key={`${question}-${index}`}><input type="radio" name="interview-answer" checked={choice === index} onChange={() => { setChoice(index); setAnswer(t(option)); }}/><span>{t(option)}</span></label>)}<label className={`answer-option ${choice === "other" ? "selected" : ""}`}><input type="radio" name="interview-answer" checked={choice === "other"} onChange={() => { setChoice("other"); setAnswer(""); }}/><span>{t("その他（自分の言葉で入力）")}</span></label></fieldset>
-          {choice !== null && <><label className="field-label" htmlFor="answer">{t("回答（送信前に編集できます）")}</label><textarea id="answer" rows={3} maxLength={1200} placeholder={t("たとえば、最初は少し緊張するけれど…")} value={answer} onChange={e => setAnswer(e.target.value)} disabled={busy}/></>}
-          <div className="l--flex -jc:between -ai:center"><span className="small muted">{answer.length}{t("/ 1200 · まだ送信されていません")}</span><button className="button primary" disabled={busy || !answer.trim()} onClick={() => void answerQuestion()}>{t("回答を送信して次へ →")}</button></div>
-          <div className="interview-controls"><button className="link-button" disabled={busy || !!answer.trim()} onClick={() => void run(async () => { const count = skipped + 1; const next = await post<InterviewNext>("interview/next", { answers, skipped: count, sendApproved: true }); setSkipped(count); if (!next.completed) { setQuestion(next.question); setOptions(next.options); } setChoice(null); setAnswer(""); })}>{t("この質問をスキップ")}</button><button className="button secondary" disabled={busy || !answers.length || !!answer.trim()} onClick={finishInterview}>{t("ここまでの回答で次へ →")}</button></div>
-          {(choice !== null) && <button className="link-button" disabled={busy} onClick={() => { setChoice(null); setAnswer(""); }}>{t("選択・入力を取り消す")}</button>}
-          {(!!answer.trim()) && <p className="small muted">{t("送信するか、選択・入力を取り消すと、スキップ・途中終了できます。")}</p>}
+          <p className="small muted">{t("選択肢を押すと送信して次へ進みます。「その他」だけ文字を入力できます。")}</p>
+          <div className="answer-choices">{options.map((option, index) => <button className={`answer-option ${choice === index ? "selected" : ""}`} disabled={busy} key={`${question}-${index}`} onClick={() => { const selected = t(option); setChoice(index); setAnswer(selected); void answerQuestion(selected); }}><span>{t(option)}</span><span aria-hidden="true">→</span></button>)}<button className={`answer-option ${choice === "other" ? "selected" : ""}`} disabled={busy} aria-expanded={choice === "other"} onClick={() => { setChoice("other"); setAnswer(""); }}>{t("その他（自分の言葉で入力）")}</button></div>
+          {choice === "other" && <><label className="field-label" htmlFor="answer">{t("回答（送信前に編集できます）")}</label><textarea id="answer" rows={3} maxLength={1200} placeholder={t("たとえば、最初は少し緊張するけれど…")} value={answer} onChange={e => setAnswer(e.target.value)} disabled={busy}/><button className="button primary" disabled={busy || !answer.trim()} onClick={() => void answerQuestion()}>{t("回答を送信して次へ →")}</button></>}
+          <div className="interview-controls"><button className="link-button" disabled={busy || !!answer.trim()} onClick={skipQuestion}>{t("この質問をスキップ")}</button><button className="button secondary" disabled={busy || !answers.length || !!answer.trim()} onClick={finishInterview}>{t("ここまでの回答で次へ →")}</button></div>
+          {choice !== null && <button className="link-button" disabled={busy} onClick={() => { setChoice(null); setAnswer(""); }}>{t("選択・入力を取り消す")}</button>}
           </>}
+          {interviewHistory.length > 0 && <button className="link-button" disabled={busy} onClick={previousQuestion}>{t("← 前の質問に戻って答え直す")}</button>}
           {busy && <p className="typing" role="status">{t("会話を考えています")}<span>● ● ●</span></p>}
         </div></div>
       </section>}
@@ -295,21 +314,8 @@ export default function MasalaApp() {
 
       {view === "approved" && <section className="success-page l--stack -g:20"><span className="success-mark">♡</span><p className="eyebrow">APPROVED BY YOU</p><h2>{t("あなたらしさに、")}<br /><em>{t("ひとさじのスパイス。")}</em></h2><p>{t("Personaを暗号化して保存しました。")}<br />{t("承認した会話の傾向だけを、シミュレーションに使います。")}</p><div className="l--cluster -g:15">{config?.demoMode && <button className="button primary" disabled={busy} onClick={() => startGame(personaId, "Your AI")}>{t("自分のAIと話してみる →")}</button>}<button className="button secondary" onClick={() => setView("home")}>{t("ホームへ")}</button></div><button className="link-button danger" disabled={busy} onClick={revoke}>{t("利用同意を撤回する")}</button></section>}
 
-      {view === "game" && game && <section className="game-workspace">
-        <div className="game-objective" aria-live="polite"><div><strong>{game.completed ? t("3シーンの体験が完了しました") : t("今回の目標")}</strong><p>{game.completed ? t("会話のペースや好みの違いを振り返り、もっと話したいか考えてみましょう。") : t(["好きな過ごし方を話し、相手の好みを1つ聞いてみよう。", "突然の雨。自分の希望を伝え、ふたりの過ごし方を相談しよう。", "意見が違ったら理由を聞き、次に一緒にしたいことを提案しよう。"][game.scene])}</p></div><div><b>{game.messages.filter(m => m.role === "user").length} / 9</b><span>{t("往復で完了")}</span></div><p className="small">{t("3シーン × 3往復。最後に、会話を続けたいかを自分で選びます。")}</p></div>
-        <div className="game-heading"><div><p className="eyebrow">A CONVERSATION, NOT A PREDICTION</p><h2>{scene.title}<em> · {partner}</em></h2></div><div className="scene-dots">{scenes.map((s, i) => <span className={i === game.scene ? "current" : i < game.scene ? "done" : ""} key={s.id}>{String(i + 1).padStart(2, "0")} <small>{s.title}</small></span>)}</div></div>
-        {!game.completed && <div className="reply-suggestions"><p className="small"><strong>{t("返答例を選ぶ、または自分で入力")}</strong> · {t("選択後に編集して送信できます。")}</p><div className="l--cluster -g:15">{[
-          ["私は静かなカフェで過ごすのが好き。あなたは？", "初めてで少し緊張するね。おすすめのチャイはある？", "最近、夢中になっていることを教えて。"],
-          ["雨が落ち着くまで、ここでもう少し話さない？", "私は予定変更も楽しみたいな。あなたはどうしたい？", "もう一杯チャイを飲みながら、次の予定を考えよう。"],
-          ["違う好みも面白いね。そう思う理由を聞いてもいい？", "私はゆっくり仲良くなりたい。あなたのペースは？", "次は、お互いが好きな場所を一つずつ選んでみない？"],
-        ][game.scene].map(text => <button className="reply-option" key={text} disabled={busy} onClick={() => { setMessage(t(text)); messageRef.current?.focus(); }}>{t(text)}</button>)}<button className="link-button" disabled={busy} onClick={() => { setMessage(""); messageRef.current?.focus(); }}>{t("その他（自分の言葉で入力）")}</button></div></div>}
-        <div className="game-grid"><div className={`date-stage emotion-${game.emotion} ${game.scene === 1 ? "rainy" : ""}`}><img src="/chai-date.png" alt={locale === "en" ? `A fictional chai date with ${partner}. Shared adult character illustration.` : `${partner}との架空のチャイデート。成人キャラクターの共通イラスト`}/><span className="stage-location">⌖ MUMBAI · CHAI CAFÉ</span><span className="emotion-chip">{t(emotionLabels[game.emotion])} {game.emotion === "happy" ? "♡" : game.emotion === "surprised" ? "!" : "✳"}</span>{game.scene === 1 && <div className="rain-overlay" aria-hidden="true"/>}<div className="scene-caption"><span className="eyebrow">SCENE {game.scene + 1} / 3</span><h3>{t(scene.subtitle)}</h3><p>{t(scene.description)}</p></div></div>
-        <div className="conversation-panel"><div className="conversation-header"><div className="partner-online"><i /><strong>{partner}</strong><span>AI SIMULATION</span></div><span className="small muted">{Math.min(game.sceneTurns, 3)} / 3 turns</span></div><p className="simulation-notice">{config?.demoMode ? t("架空の成人Persona。") : t("本人が承認した会話傾向を使うAI。")}{t("本人の感情や恋愛の成功を予測するものではありません。")}</p><div className="messages" ref={scrollRef} role="log" aria-label={t("会話履歴")} aria-live="polite">{!game.messages.length && <div className="chat-empty"><Cup /><p>{t("一杯のチャイから、")}<br />{t("会話をはじめよう。")}</p><span>{t("好きなこと、今日の気分。")}<br />{t("あなたの言葉で話しかけてみて。")}</span></div>}{game.messages.map((m, i) => <div className={`message message-${m.role}`} key={`${game.id}-${i}`}><span>{m.role === "user" ? "YOU" : partner.toUpperCase()}</span><p>{m.text}</p></div>)}{busy && <div className="message message-assistant typing" role="status">{t("考えています")}<span>● ● ●</span></div>}</div>
-        {game.completed ? <div className="game-complete l--stack -g:15"><p>{t("♡ 今日の会話は、ここまで。")}</p><p className="small muted">{config?.demoMode ? t("今回は架空の相手とのデモです。申請の流れを試すか、別の相手と話してみましょう。") : t("もっと話してみたい気持ちを、次の一歩に。")}</p><button className="button primary" disabled={busy || !!dateResult} onClick={() => void run(async () => { const result = await post<{
-            message: string;
-        }>("date-request", { gameId: game.id }); setDateResult(result.message); })}>{config?.demoMode ? t("デート申請を試す（デモ） ↗") : t("実際のデートを申請 ↗")}</button><button className="button secondary" disabled={busy} onClick={() => setView("home")}>{t("別の相手と話す・ホームへ")}</button>{dateResult && <p className="notice small" role="status">{t(dateResult)}</p>}</div> : <form className="composer" onSubmit={e => { e.preventDefault(); void sendMessage(); }}><label className="sr-only" htmlFor="game-message">{t("メッセージ")}</label><textarea ref={messageRef} id="game-message" value={message} onChange={e => setMessage(e.target.value)} rows={2} maxLength={1200} placeholder={t("あなたの言葉で話してみよう…")} disabled={busy}/><button type="submit" className="send-button" aria-label={t("メッセージを送る")} disabled={busy || !message.trim()}>↗</button><span>{message.length} / 1200 · {provider}</span></form>}
-        </div></div><div className="game-bottom"><span>✳ EVENT · {game.event === "rain" ? t("突然のモンスーン") : game.event === "repair" ? t("もう一度、伝えてみる") : game.event === "personality_difference" ? t("好みの違いを発見") : t("ふたりの会話")}</span><div className="l--cluster -g:20"><button className="link-button" disabled={busy} onClick={() => void run(async () => { setGame(await post<PublicGame>("game/retry", { gameId: game.id })); setDateResult(""); })}>{t("↺ このシーンをRetry")}</button>{personaId && <button className="link-button danger" disabled={busy} onClick={revoke}>{t("自分のPersonaの同意を撤回")}</button>}</div></div>
-      </section>}
+      {view === "game" && game && <RainGame game={game} locale={locale} partner={partner} busy={busy} demo={!!config?.demoMode} dateResult={dateResult} onAction={chooseAction} onChat={sendStoryMessage} onHome={() => setView("home")} onRetry={() => void run(async () => { setGame(await post<PublicGame>("game/retry", { gameId: game.id })); setDateResult(""); })} onDate={() => void run(async () => { const result = await post<{ message: string }>("date-request", { gameId: game.id }); setDateResult(result.message); })}/>}
+
     </main>
     <footer className="site-footer"><p><span>✳</span> LOVE MATCH MASALA <small>JAPAN MEETS INDIA. YOU MEET POSSIBILITY.</small></p><span>Made for meaningful conversations.</span><button className="link-button" onClick={() => setPrivacy(true)}>Your privacy, always. ↗</button></footer>
     <dialog className="privacy-dialog" ref={dialogRef} onCancel={() => setPrivacy(false)} onClose={() => setPrivacy(false)}><div className="l--stack -g:20"><div className="l--flex -jc:between -ai:center"><p className="eyebrow">YOUR PRIVACY, ALWAYS</p><button className="round-button" aria-label={t("プライバシー説明を閉じる")} onClick={() => setPrivacy(false)}>×</button></div><h2>{t("秘密は、")}<em>{t("あなたのもの。")}</em></h2><p>{t("回答・フィードバックは入力欄で編集し、送信ボタンで送れます。送信した回答、Persona、会話例、フィードバックをAIが処理します。完成したPersonaの利用には最終承認が必要です。")}</p><p>{t("現在の処理先：")}<strong>{provider}</strong>{t("。OpenAI利用時、送信した内容は同社が処理します。ゲームの発言も会話の生成に送信されます。")}</p><p>{t("生の回答全文は永続保存しません。承認済みPersonaはAES-256-GCMで保存時に暗号化します。推論時の内容をLLM事業者から隠す仕組みではありません。")}</p><p>{t("プレイヤーにPersonaのJSONや本人の生プロフィールを送信しません。ただし、繰り返しの会話から特徴が推測される可能性はあります。")}</p><p>{t("利用同意は承認後の画面から撤回できます。双方の承認前に連絡先を公開しません。")}</p><p className="small muted">{t("このMVPのデモはブラウザーのセッションを本人操作の識別に使います。ブラウザーを変えたりセッションが切れると、デモで作ったPersonaの操作を継続できない場合があります。架空の回答で試してください。")}</p><button className="button primary" onClick={() => setPrivacy(false)}>{t("確認しました")}</button></div></dialog>

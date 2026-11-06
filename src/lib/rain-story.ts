@@ -73,5 +73,5 @@ export function storyChoices(story: RainStory): StoryChoice[] {
   });
 }
 export function storyContext(story: RainStory, locale: Locale) {
-  return { location: story.choices[0] === "explore" ? "covered market in Mumbai" : "Mumbai chai cafe and nearby covered walkway", situation: storyText(rainStory[story.node].description, locale), outcomes: storyChoices(story).map(c => storyText(c.result, locale)), completed: story.node === "ending" };
+  return { location: story.choices[0] === "explore" || story.choices[1] === "wander" ? "covered market in Mumbai" : "Mumbai chai cafe and nearby covered walkway", situation: storyText(rainStory[story.node].description, locale), outcomes: storyChoices(story).map(c => storyText(c.result, locale)), completed: story.node === "ending" };
 }
