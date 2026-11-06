@@ -5,6 +5,8 @@ import { dimensionIds, type ConversationSummary, type Feelings, type PublicConve
 import type { Reflection } from "@/lib/reflection";
 import type { Locale } from "@/lib/i18n";
 import { rainStory, storyChoices, storyText } from "@/lib/rain-story";
+import CafeScene from "./cafe-scene";
+import { cafeTitles } from "@/lib/cafe-adventure";
 
 export type ConversationTarget = { id: string; matchId: string };
 type Props = { locale: Locale; demo: boolean; initialTarget: ConversationTarget | null; onHome: () => void; onBusyChange: (busy: boolean) => void };
@@ -81,7 +83,7 @@ export default function ConversationExperience({ locale, demo, initialTarget, on
     const ok = await run(async () => {
       const c = await post<PublicConversation>(path, { ...body, clientTurnId });
       accept(c); turnIds.current.delete(key);
-      if (path === "message") { setDrafts(previous => ({ ...previous, [c.id]: "" })); setOther(false); }
+      if (path === "message") { setDrafts(previous => ({ ...previous, [c.id]: "" })); setOther(c.adventure?.stage === "complete"); }
       else setActionsOpen(false);
     });
     return ok;
@@ -100,6 +102,8 @@ export default function ConversationExperience({ locale, demo, initialTarget, on
   function feedback(feelings: Feelings) { if (current) void run(async () => accept(await post<PublicConversation>("feedback", { gameId: current.id, feelings }))); }
   function jump(messageId: string) {
     const element = document.getElementById(`message-${messageId}`);
+    const archive = element?.closest("details");
+    if (archive) archive.open = true;
     element?.scrollIntoView({ behavior: "smooth", block: "center" }); element?.focus();
   }
   const report = current?.reports.filter(r => r.locale === locale).at(-1);
@@ -107,8 +111,12 @@ export default function ConversationExperience({ locale, demo, initialTarget, on
   const latestPerPartner = sessions.filter((s, index) => sessions.findIndex(item => item.partnerRef === s.partnerRef) === index);
   const draft = current ? drafts[current.id] || "" : "";
   const currentNodeTurns = current?.messages.filter(m => m.role === "user" && m.kind !== "story_action" && m.sceneNode === current.story.node).length ?? 0;
+  const adventure = current?.adventure;
+  function renderMessage(m: PublicConversation["messages"][number]) {
+    return <article tabIndex={-1} id={`message-${m.id}`} key={m.id} className={`dialogue-bubble ${m.role} ${m.kind === "story_action" ? "story-action" : ""}`}><strong>{m.role === "user" ? pick("あなた", "You") : current?.partnerName}{m.kind === "story_action" && ` · ${pick("物語の行動", "Story action")}`}</strong><p>{m.text}</p>{m.kind === "suggested_reply" && <small>{pick("選択した返答", "Selected reply")}</small>}</article>;
+  }
 
-  return <section className="conversation-workspace">
+  return <section className={`conversation-workspace ${adventure ? "cafe-adventure" : ""}`}>
     <div className="conversation-toolbar"><button className="link-button" disabled={busy} onClick={() => { if (current) void run(async () => { await list(); setCurrent(null); setShowReflection(false); }); else onHome(); }}>{current ? pick("← 相手一覧・比較へ", "← Companions & comparison") : pick("← ホームへ", "← Home")}</button><span>{pick("会話は同じログイン中に再開できます。再起動・期限切れで終了します。", "Resume during this sign-in. Sessions end on server restart or expiry.")}</span></div>
     {error && <div className="alert" role="alert">{error}</div>}
     {!current ? <>
@@ -129,23 +137,25 @@ export default function ConversationExperience({ locale, demo, initialTarget, on
       </section>
       {sessions.length > 0 && <details className="conversation-archive"><summary>{pick("これまでのデート", "Your dates so far")} ({sessions.length})</summary>{sessions.map(s => <button className="button secondary" disabled={busy} key={s.id} onClick={() => void resume(s.id)}>{s.partnerName} · {new Date(s.updatedAt).toLocaleTimeString(locale === "en" ? "en-US" : "ja-JP", { hour: "2-digit", minute: "2-digit" })} · {s.turns} {pick("往復", "exchanges")}</button>)}</details>}
     </> : <>
-      <header className={`conversation-heading ${current.partnerRef.startsWith("demo-") ? "with-portrait" : ""}`}>{current.partnerRef.startsWith("demo-") && <img className="conversation-heading-portrait" src={characterArt(current.partnerRef).src} style={{ objectPosition: characterArt(current.partnerRef).position }} alt={pick(`${current.partnerName}のイメージ・架空の成人`, `${current.partnerName}, a fictional adult companion`)}/>}<p className="eyebrow">A LITTLE CHAI. A LITTLE CURIOSITY.</p><h2 ref={heading} tabIndex={-1}>{current.partnerName}{pick("と、もう少し。", ", a little longer.")}</h2><p>{pick("返答を選んで話す。「次の展開」を選んだときだけ、物語が進みます。", "Choose a reply to talk. Only a story action moves the scene forward.")}</p></header>
+      <header className={`conversation-heading ${current.partnerRef.startsWith("demo-") ? "with-portrait" : ""}`}>{current.partnerRef.startsWith("demo-") && <img className="conversation-heading-portrait" src={characterArt(current.partnerRef).src} style={{ objectPosition: characterArt(current.partnerRef).position }} alt={pick(`${current.partnerName}のイメージ・架空の成人`, `${current.partnerName}, a fictional adult companion`)}/>}<p className="eyebrow">A LITTLE CHAI. A LITTLE CURIOSITY.</p><h2 ref={heading} tabIndex={-1}>{current.partnerName}{pick("と、もう少し。", ", a little longer.")}</h2><p>{adventure ? pick("お互いにチャイを選んで、ふたりの思い出を作ろう。返事を選ぶと、そのまま出来事が進みます。", "Choose a chai for each other and make a memory. Your replies move the experience forward.") : pick("返答を選んで話す。「次の展開」を選んだときだけ、物語が進みます。", "Choose a reply to talk. Only a story action moves the scene forward.")}</p></header>
       <div className="dialogue-layout"><div className="dialogue-main">
+        {adventure && <p className="cafe-current-step">{cafeTitles[adventure.stage][locale]}</p>}
+        {adventure && current.messages.length > 2 && <details className="cafe-history"><summary>{pick("これまでの会話を読む", "Read the conversation so far")} ({current.messages.length - 2})</summary><div className="cafe-history-messages">{current.messages.slice(0, -2).map(renderMessage)}</div></details>}
         <div className="dialogue-transcript" ref={transcript} role="log" aria-live="polite" aria-relevant="additions" aria-label={pick("会話履歴", "Conversation history")}>
-          {current.messages.map(m => <article tabIndex={-1} id={`message-${m.id}`} key={m.id} className={`dialogue-bubble ${m.role} ${m.kind === "story_action" ? "story-action" : ""}`}><strong>{m.role === "user" ? pick("あなた", "You") : current.partnerName}{m.kind === "story_action" && ` · ${pick("物語の行動", "Story action")}`}</strong><p>{m.text}</p>{m.kind === "suggested_reply" && <small>{pick("選択した返答", "Selected reply")}</small>}</article>)}
+          {(adventure ? current.messages.slice(-2) : current.messages).map(renderMessage)}
         </div>
         {busy && <p className="typing" role="status">{pick("処理しています…", "Working…")}</p>}
-        <div className="dialogue-composer"><h3>{pick("あなたの返事", "Your reply")}</h3>
+        <div className="dialogue-composer"><h3>{adventure ? adventure.stage === "complete" ? pick("まだ話したいことがあれば", "Anything else on your mind?") : pick("あなたは、どうする？", "What would you like to do?") : pick("あなたの返事", "Your reply")}</h3>
           {limit ? <p role="status">{pick("60往復の区切りです。振り返るか、新しいデートを始められます。", "You've reached 60 exchanges. Reflect or start a new date.")}</p> : <>
-            {current.story.node === "guessing" ? <div className="reply-options">{rainStory.guessing.choices.map(c => <button disabled={busy} key={c.id} onClick={() => void send("action", { choiceId: c.id })}>{storyText(c.label, locale)}</button>)}</div> : !other && <div className="reply-options">{current.suggestions.locale === locale && current.suggestions.items.map(s => <button disabled={busy} key={s.id} onClick={() => void send("message", { suggestionId: s.id })}>{s.text}<span aria-hidden="true">↵</span></button>)}<button className="reply-other" disabled={busy} onClick={() => setOther(true)}>{pick("その他・自分で書く", "Other · write your own")}</button></div>}
+            {current.story.node === "guessing" ? <div className="reply-options">{rainStory.guessing.choices.map(c => <button disabled={busy} key={c.id} onClick={() => void send("action", { choiceId: c.id })}>{storyText(c.label, locale)}</button>)}</div> : !other && <div className="reply-options">{current.suggestions.locale === locale && current.suggestions.items.map(s => <button disabled={busy} key={s.id} onClick={() => void send("message", { suggestionId: s.id })}><span>{s.text}{s.hint && <small className="cafe-option-hint">{s.hint}</small>}</span><span aria-hidden="true">↵</span></button>)}<button className="reply-other" disabled={busy} onClick={() => setOther(true)}>{adventure ? pick("もう少し話す・自分で書く", "Talk a little more · write your own") : pick("その他・自分で書く", "Other · write your own")}</button></div>}
             {current.story.node !== "guessing" && other && <form onSubmit={e => { e.preventDefault(); if (draft.trim()) void send("message", { message: draft.trim() }); }}><label htmlFor="conversation-message">{pick("自分の言葉で返す", "Reply in your own words")}</label><textarea autoFocus id="conversation-message" rows={3} maxLength={1200} disabled={busy} value={draft} onChange={e => setDrafts(previous => ({ ...previous, [current.id]: e.target.value }))}/><div className="composer-actions"><button className="button primary" disabled={busy || !draft.trim()}>{pick("返事を送る", "Send reply")}</button><button className="link-button" type="button" disabled={busy} onClick={() => setOther(false)}>{pick("選択肢に戻る", "Back to suggestions")}</button></div></form>}
           </>}
         </div>
       </div><aside className="dialogue-aside">
-        <div className="story-panel"><p className="eyebrow">OUR RAINY-DAY STORY</p><h3>{storyText(rainStory[current.story.node].title, locale)}</h3><p>{storyText(rainStory[current.story.node].description, locale)}</p><span className="story-progress">{current.story.node === "ending" ? pick("物語は完成。会話は続けられます。", "Story complete. Keep talking if you like.") : `${current.story.choices.filter(id => !id.startsWith("answer-")).length} / 3 ${pick("つの行動（香り当ては別に回答）", "story actions (spice answer is an extra step)")}`}</span>
+        {adventure ? <CafeScene adventure={adventure} locale={locale}/> : <div className="story-panel"><p className="eyebrow">OUR RAINY-DAY STORY</p><h3>{storyText(rainStory[current.story.node].title, locale)}</h3><p>{storyText(rainStory[current.story.node].description, locale)}</p><span className="story-progress">{current.story.node === "ending" ? pick("物語は完成。会話は続けられます。", "Story complete. Keep talking if you like.") : `${current.story.choices.filter(id => !id.startsWith("answer-")).length} / 3 ${pick("つの行動（香り当ては別に回答）", "story actions (spice answer is an extra step)")}`}</span>
           {current.story.node !== "ending" ? <><button className="button secondary" disabled={busy || limit} aria-expanded={actionsOpen} onClick={() => setActionsOpen(!actionsOpen)}>{pick("次の展開を選ぶ", "Choose the next story action")}</button>{currentNodeTurns >= 2 && <p className="small muted">{pick("このまま話しても、次に進んでも大丈夫。", "Keep talking, or move the story along when you're ready.")}</p>}{actionsOpen && <div className="story-options">{rainStory[current.story.node].choices.map(c => <button disabled={busy || limit} key={c.id} onClick={() => void send("action", { choiceId: c.id })}><strong>{storyText(c.label, locale)}</strong><small>{storyText(c.hint, locale)}</small></button>)}</div>}</> : <><ol className="story-recap">{storyChoices(current.story).map(c => <li key={c.id}>{storyText(c.result, locale)}</li>)}</ol><button className="link-button" disabled={busy || current.requested} onClick={() => void run(async () => accept(await post<PublicConversation>("date", { gameId: current.id })))}>{current.requested ? pick("申請済み", "Request sent") : demo ? pick("デート申請のデモを試す", "Try the date request demo") : pick("デートを申請する", "Request a date")}</button><p className="small muted">{demo ? pick("実際の相手へは送信されません。", "No request is sent to a real person.") : pick("実際の相手の承認は別途必要です。", "The real person's agreement is still required.")}</p></>}
-        </div>
-        <div className="reflection-entry"><h3>{pick("会話から見えた相性", "What your conversation reveals")}</h3><p>{pick("共通点・違い・まだ分からない点を、発言を根拠に振り返ります。", "Reflect on shared preferences, differences and unknowns using your actual words.")}</p><button className="button primary" disabled={analyzing} onClick={() => void reflect()}>{analyzing ? pick("振り返りを作成中…", "Creating reflection…") : pick("相性を振り返る", "Reflect on compatibility")}</button><p className="small muted">{pick("いつでも振り返れます。会話は終了しません。", "Reflect whenever you like. Your conversation stays open.")}</p></div>
+        </div>}
+        <div className="reflection-entry"><h3>{pick("会話から見えた相性", "What your conversation reveals")}</h3><p>{pick("共通点・違い・まだ分からない点を、発言を根拠に振り返ります。", "Reflect on shared preferences, differences and unknowns using your actual words.")}</p><button className={`button ${adventure ? "secondary" : "primary"}`} disabled={analyzing} onClick={() => void reflect()}>{analyzing ? pick("振り返りを作成中…", "Creating reflection…") : pick("相性を振り返る", "Reflect on compatibility")}</button><p className="small muted">{pick("いつでも振り返れます。会話は終了しません。", "Reflect whenever you like. Your conversation stays open.")}</p></div>
         {target && <button className="link-button" disabled={busy} onClick={() => void open(target, true)}>{pick("新しいデートを始める（履歴は残ります）", "Start a new date (keeps this history)")}</button>}
       </aside></div>
       {showReflection && <section ref={reflectionPanel} tabIndex={-1} className="reflection-panel" aria-label={pick("相性の振り返り", "Compatibility reflection")}><div className="section-heading"><div><p className="eyebrow">YOUR CONVERSATION, NOT A SCORE</p><h3>{pick("今回の会話を振り返る", "Reflect on this conversation")}</h3></div><button className="link-button" onClick={() => setShowReflection(false)}>{pick("閉じる", "Close")}</button></div><p>{pick("これはAIの見立てです。恋愛の成功確率や、実際の相手の感情を示すものではありません。引用を見て、自分の感覚と比べてください。", "This is an AI interpretation, not a prediction of romantic success or a real person's feelings. Check the quotes against your experience.")}</p>
