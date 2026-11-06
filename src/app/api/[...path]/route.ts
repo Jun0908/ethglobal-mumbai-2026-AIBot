@@ -9,6 +9,7 @@ import { ApiError, checkOrigin, createIdentity, ensureNoPrivateText, identity, l
 import { agentReply, extractPersona, nextQuestion, revisePersona } from "@/lib/server/llm";
 import { demoPersona } from "@/lib/server/demo";
 import { sendDateRequest, verifyMatch } from "@/lib/server/matching";
+import { readLocale, translate, type Locale } from "@/lib/i18n";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,30 +35,30 @@ function ownedGame(id: string, ownerId: string) {
   if (!game || game.ownerId !== ownerId || game.expiresAt < Date.now()) throw new ApiError(404, "ゲームが見つかりません。");
   return game;
 }
-async function dispatch(path: string, body: unknown, person: Identity) {
+async function dispatch(path: string, body: unknown, person: Identity, locale: Locale) {
   switch (path) {
     case "interview/next": {
       const input = z.object({ answers: z.array(answerSchema).max(12), skipped: z.number().int().min(0).max(12), sendApproved: z.literal(true) }).strict().parse(body);
       ensureNoPrivateText(input.answers);
-      return nextQuestion(input.answers, input.skipped);
+      return nextQuestion(input.answers, input.skipped, locale);
     }
     case "persona/extract": {
       const input = approvedAnswersSchema.parse(body);
       ensureNoPrivateText(input.answers);
-      const content = await extractPersona(input.answers);
+      const content = await extractPersona(input.answers, locale);
       const draft = createDraft(person.ownerId, content);
       return { draftId: draft.id, content: draft.content };
     }
     case "persona/calibrate": {
       const input = z.object({ draftId: idSchema, scenario: z.number().int().min(0).max(2) }).strict().parse(body);
       const draft = draftFor(input.draftId, person.ownerId);
-      return agentReply(draft.content, scenarios[input.scenario], 0, []);
+      return agentReply(draft.content, translate(locale, scenarios[input.scenario]), 0, [], locale);
     }
     case "persona/revise": {
       const input = z.object({ draftId: idSchema, feedback: z.string().min(1).max(1200), sendApproved: z.literal(true) }).strict().parse(body);
       const current = draftFor(input.draftId, person.ownerId);
       ensureNoPrivateText(input.feedback);
-      const proposal = createDraft(person.ownerId, await revisePersona(current.content, input.feedback));
+      const proposal = createDraft(person.ownerId, await revisePersona(current.content, input.feedback, locale));
       return { draftId: proposal.id, content: proposal.content };
     }
     case "persona/approve": {
@@ -90,7 +91,7 @@ async function dispatch(path: string, body: unknown, person: Identity) {
       let personaId = input.agentPersonaId;
       if (isDemo() && ["demo-calm", "demo-playful"].includes(personaId)) {
         if (input.matchId !== "demo-match") throw new ApiError(403, "デモ用マッチを選んでください。");
-        const capsule: Capsule = { personaId: randomUUID(), ownerId: person.ownerId, version: 1, content: demoPersona(personaId === "demo-calm" ? "calm" : "playful"), boundaries: { revealPrivateInformation: false, allowSensitiveQuestions: false }, consent: { simulationApproved: true, approvedAt: new Date().toISOString() } };
+        const capsule: Capsule = { personaId: randomUUID(), ownerId: person.ownerId, version: 1, content: demoPersona(personaId === "demo-calm" ? "calm" : "playful", locale), boundaries: { revealPrivateInformation: false, allowSensitiveQuestions: false }, consent: { simulationApproved: true, approvedAt: new Date().toISOString() } };
         await saveCapsule(capsule);
         personaId = capsule.personaId;
       }
@@ -108,7 +109,7 @@ async function dispatch(path: string, body: unknown, person: Identity) {
         if (current.completed) throw new ApiError(409, "この会話は終了しています。もう一度始めてください。");
         return locked(`persona:${current.personaId}`, async () => {
           const capsule = await authorizeGame(current, person);
-          const reply = await agentReply(capsule.content, input.message, current.scene, current.messages);
+          const reply = await agentReply(capsule.content, input.message, current.scene, current.messages, locale);
           await authorizeGame(current, person);
           const next = advanceGame(current, input.message, reply);
           state.games.set(next.id, next);
@@ -135,22 +136,24 @@ async function dispatch(path: string, body: unknown, person: Identity) {
         if (!game.completed) throw new ApiError(409, "まず3つのシーンを体験してください。");
         const result = state.requests.get(game.id) ?? await sendDateRequest(person, game.matchId, game.id);
         state.requests.set(game.id, result);
-        return { requestId: result.id, demo: result.demo, status: "pending", message: result.demo ? "デモ申請を作成しました。実際の相手には送信されません。" : "デート申請を送りました。双方の承認まで連絡先は公開されません。" };
+        return { requestId: result.id, demo: result.demo, status: "pending", message: translate(locale, result.demo ? "デモ申請を作成しました。実際の相手には送信されません。" : "デート申請を送りました。双方の承認まで連絡先は公開されません。") };
       });
     }
     default: throw new ApiError(404, "APIが見つかりません。");
   }
 }
 export async function GET(request: NextRequest) {
+  const locale = readLocale(request.headers.get("x-masala-language"));
   if (request.nextUrl.pathname === "/api/session") {
     try { const person = identity(request); return json({ ready: true, personaIds: person.personaIds ?? [] }); }
     catch { return json({ ready: false }, 401); }
   }
   if (request.nextUrl.pathname !== "/api/config") return json({ error: "Not found" }, 404);
-  try { return json({ demoMode: isDemo(), llmMode: llmMode(), provider: llmMode() === "openai" ? "OpenAI API" : "ローカルの定型応答（LLM未使用）" }); }
-  catch { return json({ error: "サーバーのAI設定を確認してください。" }, 503); }
+  try { return json({ demoMode: isDemo(), llmMode: llmMode(), provider: llmMode() === "openai" ? "OpenAI API" : translate(locale, "ローカルの定型応答（LLM未使用）") }); }
+  catch { return json({ error: translate(locale, "サーバーのAI設定を確認してください。") }, 503); }
 }
 export async function POST(request: NextRequest) {
+  const locale = readLocale(request.headers.get("x-masala-language"));
   try {
     checkOrigin(request);
     const body = await readBody(request);
@@ -163,10 +166,10 @@ export async function POST(request: NextRequest) {
       return response;
     }
     const person = identity(request);
-    return json(await dispatch(path, body, person));
+    return json(await dispatch(path, body, person, locale));
   } catch (error) {
-    if (error instanceof ApiError) return json({ error: error.message }, error.status);
-    if (error instanceof z.ZodError) return json({ error: "入力内容を確認してください。未承認・不足・長すぎる項目があります。" }, 400);
-    return json({ error: "処理を完了できませんでした。時間をおいて再試行してください。" }, 500);
+    if (error instanceof ApiError) return json({ error: translate(locale, error.message) }, error.status);
+    if (error instanceof z.ZodError) return json({ error: translate(locale, "入力内容を確認してください。未承認・不足・長すぎる項目があります。") }, 400);
+    return json({ error: translate(locale, "処理を完了できませんでした。時間をおいて再試行してください。") }, 500);
   }
 }

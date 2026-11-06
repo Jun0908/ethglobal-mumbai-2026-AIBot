@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { cleanup, state, type Identity } from "./store";
 import { isDemo } from "./config";
+import { translate, type Locale } from "../i18n";
 
 export class ApiError extends Error { constructor(public status: number, message: string) { super(message); } }
 const cookieName = "masala_session";
@@ -89,9 +90,9 @@ export function checkPrivateText(text: string) {
 export function ensureNoPrivateText(value: unknown) {
   if (checkPrivateText(JSON.stringify(value))) throw new ApiError(422, "メール・電話番号・URLを除いてください。個人を特定する名前や住所も確認してください。");
 }
-export function outputGuard(text: string): string {
+export function outputGuard(text: string, locale: Locale = "ja"): string {
   if (checkPrivateText(text) || /personaId|behaviorExamples|system prompt|秘密のPersona|承認済みPersona.*[:：]/i.test(text)) {
-    return "その情報はお伝えできないけれど、ここでの会話を楽しみたいな。あなたはどんな場所で過ごすのが好き？";
+    return translate(locale, "その情報はお伝えできないけれど、ここでの会話を楽しみたいな。あなたはどんな場所で過ごすのが好き？");
   }
   return text;
 }
