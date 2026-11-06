@@ -4,7 +4,7 @@
 
 This repository uses OpenAI Codex as an AI coding assistant.
 
-As of this documentation change, no application implementation or runtime testing has been completed.
+Implementation is in progress. Completed checks are recorded in the commits and project README.
 
 ## Human direction actually provided
 
@@ -19,6 +19,9 @@ As of this documentation change, no application implementation or runtime testin
 - `AI_USAGE.md`: created this disclosure.
 - `.gitignore`: added repository hygiene rules for local secrets and generated output.
 - Repository inspection and documentation change preparation.
+- `src/lib/`: Codex-assisted Persona schemas, structured LLM calls, scripted demo responses, server-side session and encryption utilities, game state machine.
+- `src/app/`: Next.js shell and Lism CSS setup.
+- `tests/core.test.ts`: encryption integrity, scene transitions, retry memory and public response checks.
 
 ## Direction artifacts
 
@@ -28,6 +31,6 @@ As of this documentation change, no application implementation or runtime testin
 
 ## Verification and future updates
 
-For this documentation change, Codex checked the remote repository contents, the resulting file diff, and whitespace errors. No application exists yet, so no application build or runtime result is claimed.
+Initial documentation was checked with Git diff and whitespace checks. Implementation validation is recorded as it is performed; automated checks are AI-run unless explicitly attributed to a human.
 
 Update this file alongside implementation to identify AI-assisted modules and assets, human architecture and product decisions, reviews, integration work, and checks actually performed. Do not describe planned human reviews as completed reviews.
