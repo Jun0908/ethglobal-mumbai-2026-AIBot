@@ -6,6 +6,7 @@ import { z } from "zod";
 import { personaContentSchema, type PersonaContent } from "../schemas";
 import { encrypt, decrypt } from "../crypto";
 import type { Game } from "../game";
+import type { Conversation } from "../conversation";
 import { isDemo } from "./config";
 
 export const capsuleSchema = z.object({
@@ -18,12 +19,14 @@ export type Capsule = z.infer<typeof capsuleSchema>;
 export type Draft = { id: string; ownerId: string; content: PersonaContent; expiresAt: number };
 export type Identity = { ownerId: string; subject: string | null; expiresAt: number; personaIds: string[] };
 type State = {
+  conversations: Map<string, Conversation>;
   identities: Map<string, Identity>; drafts: Map<string, Draft>; games: Map<string, Game>;
   limits: Map<string, { count: number; until: number }>; locks: Set<string>;
   requests: Map<string, { id: string; demo: boolean }>; key?: Promise<Buffer>;
 };
 const root = globalThis as typeof globalThis & { masalaState?: State };
-export const state: State = root.masalaState ??= { identities: new Map(), drafts: new Map(), games: new Map(), limits: new Map(), locks: new Set(), requests: new Map() };
+export const state: State = root.masalaState ??= { conversations: new Map(), identities: new Map(), drafts: new Map(), games: new Map(), limits: new Map(), locks: new Set(), requests: new Map() };
+state.conversations ??= new Map();
 // Runtime-only private storage must never become part of the deployment trace.
 const dataDir = () => resolve(/* turbopackIgnore: true */ process.env.PERSONA_DATA_DIR || ".data/personas");
 
@@ -59,7 +62,7 @@ export async function loadCapsule(id: string): Promise<Capsule> {
 }
 export function cleanup() {
   const now = Date.now();
-  for (const map of [state.identities, state.drafts, state.games]) {
+  for (const map of [state.identities, state.drafts, state.games, state.conversations]) {
     for (const [id, entry] of map) if (entry.expiresAt <= now) map.delete(id);
   }
   for (const [id, entry] of state.limits) if (entry.until <= now) state.limits.delete(id);

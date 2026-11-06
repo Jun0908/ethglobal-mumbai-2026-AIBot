@@ -10,6 +10,9 @@ import { agentReply, extractPersona, nextQuestion, revisePersona } from "@/lib/s
 import { demoPersona } from "@/lib/server/demo";
 import { sendDateRequest, verifyMatch } from "@/lib/server/matching";
 import { readLocale, translate, type Locale } from "@/lib/i18n";
+import { interviewProgress } from "@/lib/interview";
+import { chooseStory, newRainStory, rainStory, storyContext, storyText } from "@/lib/rain-story";
+import { dispatchConversation } from "@/lib/server/conversation-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,11 +39,13 @@ function ownedGame(id: string, ownerId: string) {
   return game;
 }
 async function dispatch(path: string, body: unknown, person: Identity, locale: Locale) {
+  if (path.startsWith("dialogue/")) return dispatchConversation(path, body, person, locale);
   switch (path) {
     case "interview/next": {
       const input = z.object({ answers: z.array(answerSchema).max(12), skipped: z.number().int().min(0).max(12), sendApproved: z.literal(true) }).strict().parse(body);
       ensureNoPrivateText(input.answers);
-      return nextQuestion(input.answers, input.skipped, locale);
+      if (interviewProgress(input.answers.length, input.skipped).finished) return { completed: true, question: null };
+      return { ...await nextQuestion(input.answers, input.skipped, locale), completed: false };
     }
     case "persona/extract": {
       const input = approvedAnswersSchema.parse(body);
@@ -87,7 +92,7 @@ async function dispatch(path: string, body: unknown, person: Identity, locale: L
       });
     }
     case "game/start": {
-      const input = z.object({ matchId: idSchema, agentPersonaId: idSchema, simulationConsent: z.boolean().optional() }).strict().parse(body);
+      const input = z.object({ matchId: idSchema, agentPersonaId: idSchema, simulationConsent: z.boolean().optional(), mode: z.literal("rain").optional() }).strict().parse(body);
       let personaId = input.agentPersonaId;
       if (isDemo() && ["demo-calm", "demo-playful"].includes(personaId)) {
         if (input.matchId !== "demo-match") throw new ApiError(403, "デモ用マッチを選んでください。");
@@ -99,6 +104,7 @@ async function dispatch(path: string, body: unknown, person: Identity, locale: L
       if (!capsule.consent.simulationApproved || (isDemo() && capsule.ownerId !== person.ownerId)) throw new ApiError(403, "このPersonaの利用同意を確認できません。");
       await verifyMatch(person, input.matchId, personaId);
       const game: Game = { id: randomUUID(), ownerId: person.ownerId, personaId, personaVersion: capsule.version, matchId: input.matchId, scene: 0, sceneTurns: 0, completed: false, messages: [], checkpoint: 0, emotion: "neutral", event: "none", expiresAt: Date.now() + 2 * 60 * 60_000 };
+      if (input.mode === "rain") { game.story = newRainStory(); game.scene = 1; game.event = "rain"; }
       state.games.set(game.id, game);
       return publicGame(game);
     }
@@ -109,9 +115,30 @@ async function dispatch(path: string, body: unknown, person: Identity, locale: L
         if (current.completed) throw new ApiError(409, "この会話は終了しています。もう一度始めてください。");
         return locked(`persona:${current.personaId}`, async () => {
           const capsule = await authorizeGame(current, person);
-          const reply = await agentReply(capsule.content, input.message, current.scene, current.messages, locale);
+          const reply = await agentReply(capsule.content, input.message, current.scene, current.messages, locale, current.story ? storyContext(current.story, locale) : undefined);
           await authorizeGame(current, person);
           const next = advanceGame(current, input.message, reply);
+          state.games.set(next.id, next);
+          return { game: publicGame(next), reply };
+        });
+      });
+    }
+    case "game/action": {
+      const input = z.object({ gameId: idSchema, choiceId: idSchema, revision: z.number().int().min(0) }).strict().parse(body);
+      return locked(`game:${input.gameId}`, async () => {
+        const current = ownedGame(input.gameId, person.ownerId);
+        if (!current.story || current.completed || current.story.revision !== input.revision) throw new ApiError(409, "場面が変わりました。現在の選択肢から選んでください。");
+        const choice = rainStory[current.story.node].choices.find(c => c.id === input.choiceId);
+        if (!choice) throw new ApiError(400, "この場面では選べない行動です。");
+        const nextStory = chooseStory(current.story, choice.id);
+        return locked(`persona:${current.personaId}`, async () => {
+          const capsule = await authorizeGame(current, person);
+          const selected = storyText(choice.label, locale);
+          const reply = await agentReply(capsule.content, selected, 1, current.messages, locale, storyContext(nextStory, locale));
+          await authorizeGame(current, person);
+          const next = advanceGame(current, selected, reply);
+          next.story = nextStory;
+          next.completed = nextStory.node === "ending";
           state.games.set(next.id, next);
           return { game: publicGame(next), reply };
         });
@@ -133,7 +160,7 @@ async function dispatch(path: string, body: unknown, person: Identity, locale: L
       return locked(`game:${input.gameId}`, async () => {
         const game = ownedGame(input.gameId, person.ownerId);
         await authorizeGame(game, person);
-        if (!game.completed) throw new ApiError(409, "まず3つのシーンを体験してください。");
+        if (!game.completed) throw new ApiError(409, "まずデート体験を完了してください。");
         const result = state.requests.get(game.id) ?? await sendDateRequest(person, game.matchId, game.id);
         state.requests.set(game.id, result);
         return { requestId: result.id, demo: result.demo, status: "pending", message: translate(locale, result.demo ? "デモ申請を作成しました。実際の相手には送信されません。" : "デート申請を送りました。双方の承認まで連絡先は公開されません。") };

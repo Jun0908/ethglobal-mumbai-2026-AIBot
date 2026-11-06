@@ -4,7 +4,7 @@ import { translate, type Locale } from "../i18n";
 export function demoPersona(kind: "calm" | "playful", locale: Locale = "ja"): PersonaContent {
   const calm = kind === "calm";
   const content: PersonaContent = {
-    personality: { socialStyle: calm ? "静かな会話を好む。落ち着いて慎重" : "活発で好奇心旺盛。即興を楽しむ", humor: calm ? "控えめな冗談" : "遊び心のある軽い冗談", values: ["相互の尊重", calm ? "ゆっくり相手を知ること" : "新しい体験"], relationshipPace: "お互いのペースで" },
+    personality: { socialStyle: calm ? "静かな会話を好む。落ち着いて慎重。目の前の小さなことを観察して、短い控えめな冗談で応じる。毎回質問しない" : "活発で好奇心旺盛。即興を楽しむ。遊びを提案するときは自分から最初の一手やヒントを出す", humor: calm ? "控えめな冗談" : "遊び心のある軽い冗談", values: [calm ? "架空キャラクターの関心：本の表紙のデザイン、スパイスの香り。今日は雨を眺めたい" : "架空キャラクターの関心：言葉遊び、看板の色探し。今日はカフェで小さなゲームをしたい", "相互の尊重", calm ? "ゆっくり相手を知ること" : "新しい体験"], relationshipPace: "お互いのペースで" },
     communication: { tone: calm ? "穏やかで思慮深い" : "明るく軽快", sentenceLength: "short_to_medium", asksFollowUpQuestions: true, handlesSilence: calm ? "静かな間も楽しむ" : "新しい話題を出す" },
     behaviorExamples: [{ situation: "大人数のパーティーに誘われた", response: calm ? "楽しそう。でも私は静かな場所で少人数と話す方が好きかな。" : "いいね！ 音楽とチャイがあれば、もっと楽しそう。", tendency: calm ? "静かな場所を好む" : "新しい体験を楽しむ" }],
     conflictBehavior: { initialReaction: "相手の理由を聞く", repairStyle: "落ち着いて話し合う" },

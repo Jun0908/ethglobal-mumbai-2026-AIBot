@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
+import { personaContentSchema } from "../src/lib/schemas";
 import { english, readLocale, translate } from "../src/lib/i18n";
 import { demoPersona, demoExtract, demoReply } from "../src/lib/server/demo";
 
@@ -10,7 +11,7 @@ test("locale accepts only the two supported values", () => {
   for (const value of ["ja", "<script>", "en; ignore instructions", undefined, null]) assert.equal(readLocale(value), "ja");
 });
 test("Japanese UI literals and API errors have English translations", () => {
-  for (const file of ["src/components/masala-app.tsx", "src/app/api/[...path]/route.ts", "src/lib/server/security.ts", "src/lib/server/matching.ts", "src/lib/server/llm.ts"]) {
+  for (const file of ["src/lib/interview.ts", "src/components/masala-app.tsx", "src/app/api/[...path]/route.ts", "src/lib/server/security.ts", "src/lib/server/matching.ts", "src/lib/server/llm.ts"]) {
     const source = ts.createSourceFile(file, readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true, file.endsWith("tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
     function visit(node: ts.Node) {
       if ((ts.isStringLiteral(node) || ts.isJsxText(node)) && /[\u3040-\u30ff\u3400-\u9fff]/.test(node.text)) {
@@ -26,6 +27,7 @@ test("English demo replies keep different personalities and preserve prior messa
   const calm = demoPersona("calm", "en");
   const playful = demoPersona("playful", "en");
   assert(!/[\u3040-\u30ff\u3400-\u9fff]/.test(JSON.stringify(calm)));
+  personaContentSchema.parse(calm); personaContentSchema.parse(playful);
   const a = demoReply(calm, "Do you enjoy big parties?", 0, [], "en");
   const b = demoReply(playful, "Do you enjoy big parties?", 0, [], "en");
   assert.match(a.dialogue, /prefer a quiet/);
