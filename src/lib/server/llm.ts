@@ -10,10 +10,10 @@ import { translate, type Locale } from "../i18n";
 import { interviewOptions } from "../interview";
 import type { storyContext } from "../rain-story";
 
-export async function generate<T>(schema: z.ZodType<T>, name: string, instructions: string, data: unknown): Promise<T> {
+export async function generate<T>(schema: z.ZodType<T>, name: string, instructions: string, data: unknown, options?: { timeoutMs: number; maxRetries: number }): Promise<T> {
   if (!process.env.OPENAI_API_KEY?.trim()) throw new ApiError(503, "OpenAI APIキーが未設定です。.envを設定して再起動してください。");
   try {
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 30_000, maxRetries: 1 });
+    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: options?.timeoutMs ?? 30_000, maxRetries: options?.maxRetries ?? 1 });
     const response = await client.responses.parse({
       model: process.env.OPENAI_MODEL || "gpt-4.1-mini", store: false,
       input: [{ role: "system", content: instructions }, { role: "user", content: JSON.stringify(data) }],

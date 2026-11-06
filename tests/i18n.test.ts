@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
+import { personaContentSchema } from "../src/lib/schemas";
 import { english, readLocale, translate } from "../src/lib/i18n";
 import { demoPersona, demoExtract, demoReply } from "../src/lib/server/demo";
 
@@ -26,6 +27,7 @@ test("English demo replies keep different personalities and preserve prior messa
   const calm = demoPersona("calm", "en");
   const playful = demoPersona("playful", "en");
   assert(!/[\u3040-\u30ff\u3400-\u9fff]/.test(JSON.stringify(calm)));
+  personaContentSchema.parse(calm); personaContentSchema.parse(playful);
   const a = demoReply(calm, "Do you enjoy big parties?", 0, [], "en");
   const b = demoReply(playful, "Do you enjoy big parties?", 0, [], "en");
   assert.match(a.dialogue, /prefer a quiet/);

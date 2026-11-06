@@ -4,8 +4,8 @@ export function readLocale(value: string | null | undefined): Locale { return va
 export const english: Record<string, string> = {
   "静かな会話を好む。落ち着いて慎重。目の前の小さなことを観察して、短い控えめな冗談で応じる。毎回質問しない": "Prefers quiet conversation. Calm and careful, notices small details and responds with brief gentle humor rather than constant questions.",
   "活発で好奇心旺盛。即興を楽しむ。遊びを提案するときは自分から最初の一手やヒントを出す": "Lively and curious. Enjoys improvisation and starts a game by offering the first move or clue.",
-  "架空キャラクターの関心：本の表紙のデザイン、スパイスの香り。今日は雨を眺めたい": "Fictional character interests: book cover design and spice aromas. Today she wants to watch the rain.",
-  "架空キャラクターの関心：言葉遊び、看板の色探し。今日はカフェで小さなゲームをしたい": "Fictional character interests: word games and spotting colors on signs. Today she wants a small cafe game.",
+  "架空キャラクターの関心：本の表紙のデザイン、スパイスの香り。今日は雨を眺めたい": "Fictional interests: book covers, spice aromas. Today: watching the rain.",
+  "架空キャラクターの関心：言葉遊び、看板の色探し。今日はカフェで小さなゲームをしたい": "Fictional interests: word games, colorful signs. Today: a small cafe game.",
   "架空の成人キャラクターのイラスト": "Illustration of a fictional adult character",
   "。OpenAI利用時、送信した内容は同社が処理します。ゲームの発言は会話の生成と、選択したときの相性の振り返りに使用します。": ". When OpenAI is selected, it processes submitted content to generate conversation and, when you choose, a reflection on your conversation.",
   "自分らしく話して、また話したい相手を見つけよう。共通点も違いも、実際の会話から振り返れます。": "Be yourself in conversation and discover who you want to talk to again. Explore shared preferences and differences through your actual exchanges.",

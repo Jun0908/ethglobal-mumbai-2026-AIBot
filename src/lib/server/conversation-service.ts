@@ -139,7 +139,7 @@ export async function dispatchConversation(path: string, body: unknown, person: 
         if (input.suggestionId && (!suggestion || c.suggestions.revision !== c.revision || c.suggestions.locale !== locale)) return fail(locale, 409, "この候補は更新されています。自分の言葉で話すこともできます。", "This suggestion is outdated. You can write your own reply.");
         text = input.message || suggestion!.text; kind = input.suggestionId ? "suggested_reply" : "free_text";
       }
-      const reply = await conversationReply(capsule.content, { ...c, story }, text, locale);
+      const reply = await conversationReply(capsule.content, { ...c, story }, text, locale, kind === "story_action" ? { before: c.story, choiceId: input.choiceId! } : undefined);
       await authorize(c, person, locale);
       const next = appendConversation(c, text, kind, reply, locale, story);
       // Analysis and feedback may have completed while the response was generating.
