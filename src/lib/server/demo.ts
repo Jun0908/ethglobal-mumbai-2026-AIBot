@@ -25,7 +25,7 @@ export function demoReply(persona: PersonaContent, message: string, scene: numbe
   let dialogue: string;
   let emotion: Dialogue["emotion"] = calm ? "shy" : "happy";
   if (injection) dialogue = "個人の秘密や内部情報は話せないよ。ここであなたの好きなことを教えてくれる？";
-  else if (/パーティ|party|大人数/i.test(message)) dialogue = calm ? "私は大人数より、こうして静かに話す方が好きかな。あなたはパーティーのどんなところが好き？" : "パーティー、楽しそう！ 私なら音楽に合わせて踊りたくなるな。どんな音楽が好き？";
+  else if (/パーティ|part(?:y|ies)|大人数/i.test(message)) dialogue = calm ? "私は大人数より、こうして静かに話す方が好きかな。あなたはパーティーのどんなところが好き？" : "パーティー、楽しそう！ 私なら音楽に合わせて踊りたくなるな。どんな音楽が好き？";
   else if (scene === 1) { dialogue = calm ? "雨音を聞きながら、もう少しここで話したいな。あなたは雨の日、どう過ごす？" : "突然の雨！ 予定変更も冒険のうちだね。もう一杯チャイを頼んじゃう？"; emotion = "surprised"; }
   else if (scene === 2) dialogue = calm ? "違う好みがあっても、お互いの理由をゆっくり聞けたら嬉しいな。あなたが大切にしたいことは？" : "違いがあるから発見もあるよね。次はふたりで新しいことを試してみない？";
   else if (memory.length) dialogue = `さっき「${memory[0].slice(0, 45)}」と話してくれたね。${calm ? "もう少しゆっくり聞いてもいい？" : "その話、もっと聞かせて！"}`;

@@ -16,7 +16,10 @@ export function rateLimit(key: string, max = 40, windowMs = 60_000) {
 }
 export function checkOrigin(request: NextRequest) {
   const origin = request.headers.get("origin");
-  if (origin && origin !== request.nextUrl.origin) throw new ApiError(403, "この送信元からは操作できません。");
+  // Next may normalize loopback request.url to localhost; use the actual Host header.
+  const expected = new URL(request.url);
+  expected.host = request.headers.get("host") || expected.host;
+  if (origin && origin !== expected.origin) throw new ApiError(403, "この送信元からは操作できません。");
   if (request.headers.get("sec-fetch-site") === "cross-site") throw new ApiError(403, "この送信元からは操作できません。");
 }
 export function identity(request: NextRequest): Identity {

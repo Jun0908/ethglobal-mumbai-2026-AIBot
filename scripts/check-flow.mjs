@@ -4,7 +4,7 @@ const base = process.env.TEST_BASE_URL || "http://127.0.0.1:3001";
 function client() {
   let cookie = "";
   return async (path, body, expected = 200) => {
-    const response = await fetch(`${base}/api/${path}`, { method: "POST", headers: { "Content-Type": "application/json", ...(cookie ? { Cookie: cookie } : {}) }, body: JSON.stringify(body) });
+    const response = await fetch(`${base}/api/${path}`, { method: "POST", headers: { "Content-Type": "application/json", Origin: base, ...(cookie ? { Cookie: cookie } : {}) }, body: JSON.stringify(body) });
     const setCookie = response.headers.get("set-cookie");
     if (setCookie) cookie = setCookie.split(";")[0];
     const data = await response.json();
@@ -14,6 +14,8 @@ function client() {
 }
 const owner = client();
 const stranger = client();
+const forged = await fetch(`${base}/api/session`, { method: "POST", headers: { "Content-Type": "application/json", Origin: "https://untrusted.example" }, body: JSON.stringify({ adultConfirmed: true }) });
+assert.equal(forged.status, 403);
 await owner("session", { adultConfirmed: true });
 await stranger("session", { adultConfirmed: true });
 const answers = [

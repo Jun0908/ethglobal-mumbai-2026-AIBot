@@ -24,6 +24,8 @@ Implementation is in progress. Completed checks are recorded in the commits and 
 - `tests/core.test.ts`: encryption integrity, scene transitions, retry memory and public response checks.
 - `src/app/api/` and `src/lib/server/matching.ts`: owner-authorized APIs, consent revocation and matching integration contract.
 - `scripts/check-flow.mjs`: API flow checks using fictional adult inputs; actual scripted-mode flow passed.
+- `src/components/masala-app.tsx` and `src/app/globals.css`: Codex-assisted responsive interview, calibration and dating interface; browser checks used fictional adult inputs.
+- `public/chai-date.png`: generated with OpenAI image generation, depicting an original fictional adult Indian character aged 27 in a Mumbai cafe. Shared illustration used for both fictional demo personas with CSS emotion effects; no actual person is depicted.
 
 ## Direction artifacts
 
