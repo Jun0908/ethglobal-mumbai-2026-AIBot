@@ -9,7 +9,7 @@ export const dimensionIds = ["pace", "activities", "closeness", "differences"] a
 export type DimensionId = typeof dimensionIds[number];
 export type ConversationMessage = {
   id: string; role: "user" | "assistant"; text: string; locale: Locale;
-  kind: "free_text" | "suggested_reply" | "story_action" | "agent_reply";
+  kind: "free_text" | "suggested_reply" | "story_action" | "agent_reply" | "opening";
   sceneNode: RainStory["node"]; sequence: number;
 };
 export const feelingSchema = z.object({
@@ -33,15 +33,19 @@ export function initialSuggestions(locale: Locale, revision = 0): Suggestions {
   const setId = crypto.randomUUID();
   return { locale, revision, items: texts.map((text, i) => ({ id: `${setId}-${i}`, text })) };
 }
-export function switchSuggestionLanguage(c: Conversation, locale: Locale) {
-  if (c.suggestions.locale === locale) return;
-  if (c.revision === 0) { c.suggestions = initialSuggestions(locale); return; }
-  const texts = locale === "en" ? ["Could you tell me more about that?", "I think I feel differently. Can we talk about it?", "What would feel comfortable for both of us?"] : ["その話、もう少し聞かせて。", "私は少し違う感じ方かも。話してみてもいい？", "ふたりとも心地よく過ごすなら、どうしよう？"];
+export function switchSuggestionLanguage(c: Conversation, locale: Locale, texts?: string[]) {
+  if (c.suggestions.locale === locale && !texts) return;
+  const fallback = locale === "en" ? ["Thanks for listening.", "Let's change the topic.", "Let's pause a moment."] : ["聞いてくれてありがとう。", "話題を変えよう。", "少しひと休みしよう。"];
   const setId = crypto.randomUUID();
-  c.suggestions = { locale, revision: c.revision, items: texts.map((text, i) => ({ id: `${setId}-${i}`, text })) };
+  c.suggestions = { locale, revision: c.revision, items: (texts ?? (c.revision === 0 ? initialSuggestions(locale).items.map(s => s.text) : fallback)).map((text, i) => ({ id: `${setId}-${i}`, text })) };
 }
 export function createConversation(input: Pick<Conversation, "id" | "ownerId" | "personaId" | "personaVersion" | "matchId" | "partnerRef" | "partnerName"> & { partnerKey?: string }, locale: Locale, expiresAt: number): Conversation {
-  return { ...input, partnerKey: input.partnerKey || crypto.randomUUID(), createdAt: Date.now(), updatedAt: Date.now(), expiresAt, revision: 0, story: newRainStory(), messages: [], emotion: "neutral", suggestions: initialSuggestions(locale), feelings: { comfort: null, again: null }, reports: [], dismissed: [], request: null, receipts: {} };
+  const playful = input.partnerRef === "demo-playful";
+  const opening = locale === "en"
+    ? playful ? "The rain has changed our plans! Want to invent a tiny cafe game, or just enjoy our chai?" : "We have a little extra time. I'll enjoy my chai slowly. No need to rush the conversation."
+    : playful ? "雨で予定変更だね！ このカフェでできる小さな遊び、考えちゃおうか。それともチャイでひと休み？" : "少し時間ができたね。私はチャイをゆっくり味わおうかな。話すのも、急がなくていいよ。";
+  const messages: ConversationMessage[] = [{ id: crypto.randomUUID(), role: "assistant", text: opening, kind: "opening", locale, sceneNode: "rain", sequence: 0 }];
+  return { ...input, partnerKey: input.partnerKey || crypto.randomUUID(), createdAt: Date.now(), updatedAt: Date.now(), expiresAt, revision: 0, story: newRainStory(), messages, emotion: "neutral", suggestions: initialSuggestions(locale), feelings: { comfort: null, again: null }, reports: [], dismissed: [], request: null, receipts: {} };
 }
 export function appendConversation(current: Conversation, text: string, kind: ConversationMessage["kind"], reply: Dialogue & { suggestions: string[] }, locale: Locale, story = current.story): Conversation {
   const next = structuredClone(current);

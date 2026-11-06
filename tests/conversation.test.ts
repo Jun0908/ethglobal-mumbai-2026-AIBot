@@ -11,8 +11,8 @@ test("conversation continues after the ending and keeps stable, typed evidence I
   const prior = structuredClone(c);
   c = appendConversation(c, "次は英語で", "free_text", { dialogue: "Let's keep talking.", emotion: "happy", tone: "warm", conversationEvent: "connection", suggestedNextAction: "continue", suggestions: ["Tell me more"] }, "en");
   assert.equal(c.story.node, "ending");
-  assert.deepEqual(c.messages.slice(0, 2), prior.messages);
-  assert.equal(new Set(c.messages.map(m => m.id)).size, 4);
+  assert.deepEqual(c.messages.slice(0, 3), prior.messages);
+  assert.equal(new Set(c.messages.map(m => m.id)).size, 5);
   assert.equal(c.suggestions.revision, 2);
   assert(!JSON.stringify(publicConversation(c)).includes("private-"));
   assert(!("receipts" in publicConversation(c)));

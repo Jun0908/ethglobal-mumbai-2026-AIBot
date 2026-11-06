@@ -27,7 +27,7 @@ assert(/[\u3040-\u30ff]/.test(a.messages.at(-1).text));
 assert.equal((await post("dialogue/message", body)).revision, a.revision);
 await post("dialogue/message", { ...body, message: "changed" }, "ja", 409);
 await post("dialogue/message", { ...body, clientTurnId: randomUUID() }, "ja", 409);
-assert.equal(a.messages.length, 2);
+assert.equal(a.messages.length, 3);
 const saved = structuredClone(a.messages);
 let b = await start("demo-playful");
 assert.notEqual(a.id, b.id);
@@ -63,7 +63,7 @@ if (live) {
   assert.equal(a.feelings.comfort, "natural"); assert(a.dismissed.includes(`${reflection.id}:pace`));
   await other("dialogue/reflection", { gameId: a.id }, "en", 404);
   await other("dialogue/feedback", { gameId: a.id, feelings: { comfort: "effort", again: "no" } }, "en", 404);
-  const fresh = await start("demo-calm", true); assert.notEqual(fresh.id, a.id); assert.equal(fresh.messages.length, 0);
+  const fresh = await start("demo-calm", true); assert.notEqual(fresh.id, a.id); assert.equal(fresh.messages.length, 1);
   assert.equal((await post("dialogue/get", { gameId: a.id })).messages.length, a.messages.length);
   assert.equal((await post("dialogue/list", {}, "en")).conversations.length, 3);
   const draft = await post("persona/extract", { answers: [{ question: "How do you talk?", summary: "I enjoy slow conversations." }], sendApproved: true });

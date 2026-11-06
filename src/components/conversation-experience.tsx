@@ -103,7 +103,7 @@ export default function ConversationExperience({ locale, demo, initialTarget, on
     element?.scrollIntoView({ behavior: "smooth", block: "center" }); element?.focus();
   }
   const report = current?.reports.filter(r => r.locale === locale).at(-1);
-  const limit = !!current && current.messages.length >= current.turnLimit * 2;
+  const limit = !!current && current.revision >= current.turnLimit;
   const latestPerPartner = sessions.filter((s, index) => sessions.findIndex(item => item.partnerRef === s.partnerRef) === index);
   const draft = current ? drafts[current.id] || "" : "";
   const currentNodeTurns = current?.messages.filter(m => m.role === "user" && m.kind !== "story_action" && m.sceneNode === current.story.node).length ?? 0;
@@ -132,7 +132,6 @@ export default function ConversationExperience({ locale, demo, initialTarget, on
       <header className={`conversation-heading ${current.partnerRef.startsWith("demo-") ? "with-portrait" : ""}`}>{current.partnerRef.startsWith("demo-") && <img className="conversation-heading-portrait" src={characterArt(current.partnerRef).src} style={{ objectPosition: characterArt(current.partnerRef).position }} alt={pick(`${current.partnerName}のイメージ・架空の成人`, `${current.partnerName}, a fictional adult companion`)}/>}<p className="eyebrow">A LITTLE CHAI. A LITTLE CURIOSITY.</p><h2 ref={heading} tabIndex={-1}>{current.partnerName}{pick("と、もう少し。", ", a little longer.")}</h2><p>{pick("返答を選んで話す。「次の展開」を選んだときだけ、物語が進みます。", "Choose a reply to talk. Only a story action moves the scene forward.")}</p></header>
       <div className="dialogue-layout"><div className="dialogue-main">
         <div className="dialogue-transcript" ref={transcript} role="log" aria-live="polite" aria-relevant="additions" aria-label={pick("会話履歴", "Conversation history")}>
-          <div className="dialogue-bubble assistant"><strong>{current.partnerName}</strong><p>{pick("突然の雨で、少し時間ができたね。予定を決める前に、お互いの好きな過ごし方を話してみない？", "The rain has given us a little extra time. Before making plans, shall we talk about how we like to spend it?")}</p></div>
           {current.messages.map(m => <article tabIndex={-1} id={`message-${m.id}`} key={m.id} className={`dialogue-bubble ${m.role} ${m.kind === "story_action" ? "story-action" : ""}`}><strong>{m.role === "user" ? pick("あなた", "You") : current.partnerName}{m.kind === "story_action" && ` · ${pick("物語の行動", "Story action")}`}</strong><p>{m.text}</p>{m.kind === "suggested_reply" && <small>{pick("選択した返答", "Selected reply")}</small>}</article>)}
         </div>
         {busy && <p className="typing" role="status">{pick("処理しています…", "Working…")}</p>}

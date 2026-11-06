@@ -10,7 +10,7 @@ import { isDemo } from "./config";
 import { loadCapsule, saveCapsule, state, type Identity } from "./store";
 import { demoPersona } from "./demo";
 import { sendDateRequest, verifyMatch } from "./matching";
-import { conversationReply, generateReflection } from "./conversation-llm";
+import { conversationReply, generateReflection, playerSuggestions } from "./conversation-llm";
 
 const idBody = z.object({ gameId: z.string().uuid() });
 function fail(locale: Locale, status: number, ja: string, en: string): never { throw new ApiError(status, locale === "en" ? en : ja); }
@@ -30,12 +30,19 @@ function touch(c: Conversation, person: Identity) {
   c.expiresAt = Math.min(person.expiresAt, Date.now() + 2 * 60 * 60_000);
 }
 
+async function localizeSuggestions(c: Conversation, locale: Locale) {
+  if (c.suggestions.locale === locale) return;
+  const player = c.messages.filter(m => m.role === "user").at(-1)?.text ?? "";
+  const companion = c.messages.filter(m => m.role === "assistant").at(-1)?.text ?? "";
+  switchSuggestionLanguage(c, locale, await playerSuggestions(c, player, companion, locale));
+}
+
 export async function dispatchConversation(path: string, body: unknown, person: Identity, locale: Locale) {
   if (path === "dialogue/start") {
     const input = z.object({ matchId: idSchema, agentPersonaId: idSchema, fresh: z.boolean().default(false) }).strict().parse(body);
     return locked(`conversation-start:${person.ownerId}`, async () => {
       const previous = [...state.conversations.values()].filter(c => c.ownerId === person.ownerId && c.partnerRef === input.agentPersonaId && c.matchId === input.matchId && c.expiresAt > Date.now()).sort((a, b) => b.updatedAt - a.updatedAt)[0];
-      if (previous && !input.fresh) { await authorize(previous, person, locale); touch(previous, person); switchSuggestionLanguage(previous, locale); return publicConversation(previous); }
+      if (previous && !input.fresh) return locked(`conversation:${previous.id}`, async () => { const latest = owned(previous.id, person, locale); await authorize(latest, person, locale); touch(latest, person); await localizeSuggestions(latest, locale); return publicConversation(latest); });
       if ([...state.conversations.values()].filter(c => c.ownerId === person.ownerId).length >= 20) return fail(locale, 429, "会話が20件あります。今ある会話の続きを楽しんでください。", "You have 20 conversations. Please continue an existing one.");
       let personaId = input.agentPersonaId;
       const demo = isDemo() && ["demo-calm", "demo-playful"].includes(personaId);
@@ -64,8 +71,7 @@ export async function dispatchConversation(path: string, body: unknown, person: 
   }
   if (path === "dialogue/get") {
     const { gameId } = idBody.strict().parse(body);
-    const c = owned(gameId, person, locale); await authorize(c, person, locale); touch(c, person); switchSuggestionLanguage(c, locale);
-    return publicConversation(c);
+    return locked(`conversation:${gameId}`, async () => { const c = owned(gameId, person, locale); await authorize(c, person, locale); touch(c, person); await localizeSuggestions(c, locale); return publicConversation(c); });
   }
   if (path === "dialogue/reflection") {
     const { gameId } = idBody.strict().parse(body);
@@ -114,7 +120,7 @@ export async function dispatchConversation(path: string, body: unknown, person: 
         return publicConversation(c);
       }
       if (input.revision !== c.revision) return fail(locale, 409, "会話が更新されています。相手一覧から続きを開き直してください。", "The conversation changed. Reopen it from the companion list.");
-      if (c.messages.length >= MAX_CONVERSATION_TURNS * 2) return fail(locale, 409, "この会話は60往復になりました。振り返るか、新しいデートを始めてください。", "This conversation reached 60 exchanges. Reflect or start a new date.");
+      if (c.revision >= MAX_CONVERSATION_TURNS) return fail(locale, 409, "この会話は60往復になりました。振り返るか、新しいデートを始めてください。", "This conversation reached 60 exchanges. Reflect or start a new date.");
       let text: string; let kind: "story_action" | "free_text" | "suggested_reply"; let story = c.story;
       if (path === "dialogue/action") {
         const choice = rainStory[c.story.node].choices.find(choice => choice.id === input.choiceId);
