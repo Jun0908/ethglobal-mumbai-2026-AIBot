@@ -10,7 +10,7 @@ test("locale accepts only the two supported values", () => {
   for (const value of ["ja", "<script>", "en; ignore instructions", undefined, null]) assert.equal(readLocale(value), "ja");
 });
 test("Japanese UI literals and API errors have English translations", () => {
-  for (const file of ["src/components/masala-app.tsx", "src/app/api/[...path]/route.ts", "src/lib/server/security.ts", "src/lib/server/matching.ts", "src/lib/server/llm.ts"]) {
+  for (const file of ["src/lib/interview.ts", "src/components/masala-app.tsx", "src/app/api/[...path]/route.ts", "src/lib/server/security.ts", "src/lib/server/matching.ts", "src/lib/server/llm.ts"]) {
     const source = ts.createSourceFile(file, readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true, file.endsWith("tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
     function visit(node: ts.Node) {
       if ((ts.isStringLiteral(node) || ts.isJsxText(node)) && /[\u3040-\u30ff\u3400-\u9fff]/.test(node.text)) {

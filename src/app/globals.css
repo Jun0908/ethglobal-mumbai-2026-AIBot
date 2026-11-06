@@ -8,6 +8,21 @@
   button:disabled { cursor: wait; opacity: .55; }
   a { color: inherit; }
   h1, h2, h3, p { margin: 0; }
+  .game-objective { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; padding: 20px; margin-bottom: 24px; border: 1px solid var(--line); border-radius: 16px; background: #f0f1e6; }
+  .game-objective > div:first-child { flex: 1 1 260px; }
+  .game-objective > div:nth-child(2) { display: grid; text-align: center; }
+  .game-objective b { font-size: 24px; }
+  .game-objective > p { flex-basis: 100%; color: var(--muted); }
+  .interview-finished { padding: 24px 0; }
+  .answer-choices { border: 0; padding: 0; margin: 0; display: grid; gap: 10px; }
+  .answer-choices legend { margin-bottom: 12px; font-weight: 700; }
+  .answer-option { display: flex; align-items: center; gap: 12px; border: 1px solid var(--line); border-radius: 12px; padding: 14px; cursor: pointer; }
+  .answer-option.selected { background: #edf0e3; border-color: var(--olive); }
+  .answer-option input { flex: 0 0 auto; width: 18px; height: 18px; margin: 0; accent-color: var(--olive); }
+  .reply-suggestions { margin-bottom: 20px; }
+  .reply-suggestions > p { margin-bottom: 10px; }
+  .reply-option { padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); background: white; text-align: left; max-width: 100%; }
+  .reply-option:hover { border-color: var(--olive); background: #edf0e3; }
   .shell { max-width: 1440px; margin: auto; padding: 36px 5vw; }
   .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .2em; color: var(--olive); }
   h1, h2, h3 { font-family: Georgia, "Yu Mincho", serif; font-weight: 400; line-height: 1.15; }
@@ -118,7 +133,7 @@
   progress { width: 100%; accent-color: var(--olive); height: 6px; }
   .panel { border: 1px solid var(--line); background: #fffdf7; border-radius: 8px; padding: 28px; }
   .field-label { font-size: 12px; font-weight: 600; }
-  textarea, input:not([type=checkbox]) { width: 100%; border: 1px solid #d4d7c9; background: #fbfaf4; border-radius: 6px; padding: 13px; color: var(--ink); font-size: 13px; line-height: 1.8; }
+  textarea, input:not([type=checkbox]):not([type=radio]) { width: 100%; border: 1px solid #d4d7c9; background: #fbfaf4; border-radius: 6px; padding: 13px; color: var(--ink); font-size: 13px; line-height: 1.8; }
   textarea { resize: vertical; min-height: 84px; }
   textarea::placeholder { color: #919587; }
   .interviewer-message { display: flex; gap: 15px; align-items: flex-start; }

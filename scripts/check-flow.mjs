@@ -23,7 +23,9 @@ const answers = [
   { question: "意見が違ったら？", summary: "私は少し違う考えだけど、理由を聞いてもいい？ と言います。" },
 ];
 await owner("interview/next", { answers, skipped: 0, sendApproved: false }, 400);
-await owner("interview/next", { answers, skipped: 0, sendApproved: true });
+const question = await owner("interview/next", { answers, skipped: 0, sendApproved: true });
+assert.equal(question.options.length, 3);
+assert.equal(question.completed, false);
 for (const [approved, skipped] of [[[], 6], [answers, 4], [[...answers, ...answers, ...answers], 0]]) {
   assert.deepEqual(await owner("interview/next", { answers: approved, skipped, sendApproved: true }), { completed: true, question: null });
 }
