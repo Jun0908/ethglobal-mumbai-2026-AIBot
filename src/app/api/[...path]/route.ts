@@ -6,7 +6,7 @@ import { answerSchema, approvedAnswersSchema, idSchema, scenarios } from "@/lib/
 import { advanceGame, publicGame, retryGame, type Game } from "@/lib/game";
 import { isDemo, llmMode } from "@/lib/server/config";
 import { createDraft, loadCapsule, saveCapsule, state, type Capsule, type Identity } from "@/lib/server/store";
-import { ApiError, checkOrigin, createIdentity, ensureNoPrivateText, identity, locked, readBody, setIdentityCookie } from "@/lib/server/security";
+import { ApiError, checkOrigin, createIdentity, ensureNoPrivateText, identity, locked, persistIdentity, readBody, setIdentityCookie } from "@/lib/server/security";
 import { agentReply, extractPersona, nextQuestion, revisePersona } from "@/lib/server/llm";
 import { demoPersona } from "@/lib/server/demo";
 import { sendDateRequest, verifyMatch } from "@/lib/server/matching";
@@ -39,7 +39,7 @@ function ownedGame(id: string, ownerId: string) {
   if (!game || game.ownerId !== ownerId || game.expiresAt < Date.now()) throw new ApiError(404, "ゲームが見つかりません。");
   return game;
 }
-async function dispatch(path: string, body: unknown, person: Identity, locale: Locale) {
+async function dispatch(path: string, body: unknown, person: Identity, locale: Locale, request: NextRequest) {
   if (path.startsWith("dialogue/")) return dispatchConversation(path, body, person, locale);
   switch (path) {
     case "interview/next": {
@@ -96,6 +96,7 @@ async function dispatch(path: string, body: unknown, person: Identity, locale: L
         const capsule: Capsule = { visual:draft.visual, personaId: previous?.personaId??randomUUID(), ownerId: person.ownerId, version: (previous?.version??0)+1, content: draft.content, boundaries: { revealPrivateInformation: false, allowSensitiveQuestions: false }, consent: { simulationApproved: true, approvedAt: new Date().toISOString() } };
         await saveCapsule(capsule);
         person.personaIds = [capsule.personaId, ...(person.personaIds ?? []).filter(id=>id!==capsule.personaId)];
+        persistIdentity(request, person);
         state.drafts.delete(draft.id);
         return { personaId: capsule.personaId, approved: true };
       });
@@ -109,6 +110,7 @@ async function dispatch(path: string, body: unknown, person: Identity, locale: L
         capsule.version += 1;
         await saveCapsule(capsule);
         person.personaIds = (person.personaIds ?? []).filter(id => id !== capsule.personaId);
+        persistIdentity(request, person);
         for (const [id, draft] of state.drafts) if (draft.ownerId === person.ownerId) state.drafts.delete(id);
         return { revoked: true };
       });
@@ -215,7 +217,7 @@ export async function POST(request: NextRequest) {
       return response;
     }
     const person = identity(request);
-    return json(await dispatch(path, body, person, locale));
+    return json(await dispatch(path, body, person, locale, request));
   } catch (error) {
     if (error instanceof ApiError) return json({ error: translate(locale, error.message) }, error.status);
     if (error instanceof z.ZodError) return json({ error: translate(locale, "入力内容を確認してください。未承認・不足・長すぎる項目があります。") }, 400);

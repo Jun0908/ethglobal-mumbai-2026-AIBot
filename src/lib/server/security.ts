@@ -6,6 +6,7 @@ import { cleanup, state, type Identity } from "./store";
 import { isDemo } from "./config";
 import { translate, type Locale } from "../i18n";
 import { requestOrigin } from "../request-origin";
+import { deleteIdentity, loadIdentity, saveIdentity } from "./identity-store";
 
 export class ApiError extends Error { constructor(public status: number, message: string) { super(message); } }
 const cookieName = "masala_session";
@@ -24,8 +25,9 @@ export function checkOrigin(request: NextRequest) {
 export function identity(request: NextRequest): Identity {
   cleanup();
   const token = request.cookies.get(cookieName)?.value;
-  const session = token ? state.identities.get(token) : undefined;
+  const session = token ? state.identities.get(token) ?? loadIdentity(token) : undefined;
   if (!session) throw new ApiError(401, "セッションが切れました。ページを再読み込みしてください。");
+  if (token && !state.identities.has(token)) state.identities.set(token, session);
   rateLimit(`owner:${session.ownerId}`);
   return session;
 }
@@ -49,17 +51,23 @@ export function createIdentity(request: NextRequest, assertion?: string) {
   cleanup();
   rateLimit("new-session-global", 60);
   const previous = request.cookies.get(cookieName)?.value;
-  const existing = previous ? state.identities.get(previous) : undefined;
+  const existing = previous ? state.identities.get(previous) ?? loadIdentity(previous) : undefined;
   if (existing && !assertion) return { identity: existing, token: previous! };
   const subject = isDemo() ? null : verifyAssertion(assertion || "");
   const token = randomBytes(32).toString("base64url");
-  const session = { ownerId: subject ? `psi:${subject}` : randomBytes(24).toString("base64url"), subject, expiresAt: Date.now() + 8 * 60 * 60_000, personaIds: [] as string[] };
+  const session = { ownerId: subject ? `psi:${subject}` : randomBytes(24).toString("base64url"), subject, expiresAt: Date.now() + (isDemo() ? 30 * 24 : 8) * 60 * 60_000, personaIds: [] as string[] };
+  saveIdentity(token, session);
   state.identities.set(token, session);
-  if (previous) state.identities.delete(previous);
+  if (previous) { state.identities.delete(previous); deleteIdentity(previous); }
   return { identity: session, token };
 }
+export function persistIdentity(request: NextRequest, person: Identity) {
+  const token = request.cookies.get(cookieName)?.value;
+  if (!token) throw new ApiError(401, "セッションが切れました。ページを再読み込みしてください。");
+  saveIdentity(token, person);
+}
 export function setIdentityCookie(response: NextResponse, token: string, request: NextRequest) {
-  response.cookies.set(cookieName, token, { httpOnly: true, sameSite: "strict", secure: requestOrigin(request).startsWith("https:"), path: "/", maxAge: 8 * 60 * 60 });
+  response.cookies.set(cookieName, token, { httpOnly: true, sameSite: "strict", secure: requestOrigin(request).startsWith("https:"), path: "/", maxAge: (isDemo() ? 30 * 24 : 8) * 60 * 60 });
 }
 export async function readBody(request: NextRequest) {
   // Enforce a limit on streamed/chunked requests as well as Content-Length.
