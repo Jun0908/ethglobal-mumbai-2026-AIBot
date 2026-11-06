@@ -17,7 +17,7 @@ export function romanceVisuals(state: RecordState) {
     const different = evidence.some(m => m.observation === 'different');
     // A callback records an actual change of pace/route on the following date.
     const adjusted = evidence.some(m => m.observation === 'different' && (m.beat === 1 || m.beat === 5) && state.messages.some(v => v.role === 'assistant' && v.beat === (m.beat === 1 ? 4 : 8) && v.text.includes(state.messages.find(v => v.id === m.playerId)!.text)));
-    const status = adjusted ? 'adjusted' : aligned && different ? 'mixed' : aligned ? 'aligned' : different ? 'different' : 'unknown';
+    const status: 'adjusted'|'mixed'|'aligned'|'different'|'unknown' = adjusted ? 'adjusted' : aligned && different ? 'mixed' : aligned ? 'aligned' : different ? 'different' : 'unknown';
     return {dimension, evidence, status};
   })};
 }

@@ -14,19 +14,20 @@
     "test:languages": "node scripts/check-languages.mjs"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "lism-css": "1.1.0",
     "next": "16.4.5",
+    "openai": "7.53.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "lism-css": "1.1.0",
-    "openai": "7.53.0",
-    "zod": "^4.1.0",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "zod": "^4.1.0"
   },
   "devDependencies": {
-    "typescript": "^5.9.0",
-    "tsx": "^4.20.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0"
+    "@types/react-dom": "^19.2.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
   }
 }

@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {beats,chapters,type RomanceState} from '@/lib/romance-story';
+import RomanceRelationship from './romance-relationship';
 import {characterArt} from '@/lib/character-art';
 import type {Locale} from '@/lib/i18n';
 type PublicState=Omit<RomanceState,'receipts'|'practiceBase'>&{practice:boolean};
@@ -26,6 +27,7 @@ export default function RomanceExperience({locale,onHome}:{locale:Locale;onHome:
  {!state?<p role="status">{p('物語を読み込んでいます…','Loading your story…')}</p>:<>
  <p className="eyebrow">{p(`第${chapter+1}話`, `CHAPTER ${chapter+1}`)} · {chapters[chapter][locale]}</p>
  {state.practice&&<p role="status">{p('別の選び方を試しています。本編の記録は残っています。','Trying a different path. Your original story is saved.')} <button disabled={busy} onClick={()=>void send('restore')}>{p('本編へ戻る','Return to original story')}</button></p>}
+ <div className="romance-play-layout"><div className="romance-play-main">
  <div className={`romance-stage emotion-${emotion} chapter-${chapter}`}>
  {emotion==='happy'?<img className="romance-portrait" src={characterArt('Mira').src} alt={p('楽しそうに笑うMira','Mira smiling warmly')}/>:<div className={`romance-expression expression-${emotion}`} role="img" aria-label={feeling}/>}
  <div className="romance-caption"><p>{scene?.scene[locale]}</p><span>{feeling}</span></div>
@@ -38,6 +40,7 @@ export default function RomanceExperience({locale,onHome}:{locale:Locale;onHome:
  {!state.paused&&state.step<12&&<div className="reply-options">{beats[state.step].options.map((o,index)=><button key={`${state.step}-${index}`} disabled={busy} onClick={()=>void send('reply',{option:index})}>{o.label[locale]}</button>)}</div>}
  <form className="romance-composer" onSubmit={e=>{e.preventDefault();if(text.trim())void send('reply',{message:text.trim()});}}><label htmlFor="romance-input">{p('その他・自分の言葉で話す','Other · speak in your own words')}</label><textarea id="romance-input" rows={2} maxLength={1200} value={text} disabled={busy} onChange={e=>setText(e.target.value)}/><button className="button primary" disabled={busy||!text.trim()}>{p('伝える','Say it')}</button></form>
  {fallback&&<p className="small" role="status">{p('自由入力の理解が限られています。表示された返答からも進められます。','Free-text understanding is limited right now. The replies above can also move the scene forward.')}</p>}
+ </div><RomanceRelationship state={state} locale={locale}/></div>
  <details open={history} onToggle={e=>setHistory(e.currentTarget.open)}><summary>{p('これまでの会話','Our conversation')}</summary>{state.messages.map(m=><article id={`romance-${m.id}`} className={`dialogue-bubble ${m.role}`} key={m.id}><strong>{m.role==='user'?p('あなた','You'):'Mira'}</strong><p>{m.text}</p></article>)}</details>
  {journal&&<section className="romance-journal"><h2>{p('二人について、分かったこと','What you have discovered together')}</h2><p>{p('この物語で表明した希望の振り返りです。一度の返答で性格を決めず、まだ分からないことも残します。','These are wishes expressed in this story. A single reply does not establish a lasting trait, and some things remain unknown.')}</p>
  {(['pace','activities','closeness','differences'] as const).map((dimension,index)=>{const memories=state.memories.filter(m=>m.dimension===dimension);return <article key={dimension}><h3>{[p('会話のペース','Conversation pace'),p('一緒に過ごす時間','Time together'),p('距離の取り方','Closeness'),p('違い・支え方','Differences & support')][index]}</h3>{!memories.length?<p>{p('まだ判断に必要な言葉がありません。','There is not enough evidence yet.')}</p>:memories.map(m=><div key={m.id}><strong>{m.observation==='aligned'?p('共通する希望があった','A shared wish'):p('違いが見えた','A difference emerged')}</strong><p className="small">{p('この場面での返答。恒常的な性格や恋愛の成功を示しません。','A reply in this scene, not a lasting trait or prediction.')}</p>{[m.playerId,m.partnerId].map(id=>{const source=state.messages.find(v=>v.id===id);return source&&<button className="evidence-quote" key={id} onClick={()=>{setHistory(true);setTimeout(()=>document.getElementById(`romance-${id}`)?.scrollIntoView({block:'center'}),0);}}><small>{source.role==='user'?p('あなた','You'):'Mira'}</small>“{source.text}”</button>;})}<button className="link-button" disabled={busy} onClick={()=>void send('forget',{memoryId:m.id})}>{p('この記録と根拠を削除する','Remove this memory and its evidence')}</button></div>)}</article>;})}

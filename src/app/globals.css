@@ -505,3 +505,55 @@
     .rain-ending { padding: 20px; }
   }
 }
+@layer masala {
+ .romance-game {max-width:1320px;padding:24px 32px;}
+ .romance-play-layout {display:grid;grid-template-columns:minmax(0,1.15fr) minmax(350px,1fr);gap:28px;align-items:start;}
+ .romance-play-main {min-width:0;}
+ .romance-stage {height:450px;border-radius:26px 26px 8px 8px;}
+ .romance-dialogue {margin:0;padding:18px 24px;border-left:0;border-radius:0 0 22px 22px;}
+ .romance-dialogue p {font-size:16px;line-height:1.75;}
+ .romance-game .reply-options {grid-template-columns:1fr;gap:8px;margin:14px 0;}
+ .romance-game .reply-options button {min-height:46px;padding:12px 18px;border-radius:18px;background:#fffaf0;}
+ .romance-composer {margin:16px 0;gap:8px;}
+ .romance-composer label {font-size:12px;}
+ .relationship-panel {padding:24px;background:#fffaf0;border:1px solid #d4bd96;border-radius:32px;position:sticky;top:20px;min-width:0;}
+ .relationship-panel h2 {font-family:Georgia,'Yu Mincho',serif;text-align:center;font-size:25px;line-height:1.4;margin:0 0 18px;color:#51552d;}
+ .relationship-hearts {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));list-style:none;margin:0;padding:0;gap:8px;}
+ .relationship-hearts li {text-align:center;color:#968365;font-size:12px;}
+ .relationship-hearts svg {width:48px;height:48px;margin:auto;display:block;}
+ .relationship-hearts .reached {color:#b64f31;}
+ .relationship-hearts li[aria-current] span {background:#b64f31;color:white;border-radius:18px;padding:4px 10px;display:inline-block;}
+ .relationship-note {font-size:11px;text-align:center;color:#6f6858;margin:14px 0 24px;line-height:1.6;}
+ .relationship-map {display:grid;grid-template-columns:1fr 1fr;gap:12px 28px;}
+ .relationship-node {display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:14px 6px;background:#f1edda;border:1px solid #d8cba9;border-radius:45%;color:#565d35;min-height:132px;cursor:pointer;}
+ .relationship-node > svg {width:46px;height:46px;}
+ .relationship-node strong {font-size:14px;}
+ .relationship-node > span {display:flex;align-items:center;justify-content:center;gap:4px;font-size:11px;}
+ .relationship-node > span svg {width:16px;height:16px;}
+ .relationship-node.status-different,.relationship-node.status-mixed {background:#f6e8da;color:#89462c;}
+ .relationship-node.status-adjusted {background:#e5edda;}
+ .relationship-node.status-unknown {background:#f0ede7;border-style:dashed;color:#797466;}
+ .relationship-node[aria-pressed=true] {outline:3px solid #9c5737;outline-offset:2px;}
+ .relationship-pair {grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:14px;margin:-5px 0;}
+ .relationship-pair > img,.relationship-pair > span {width:68px;height:68px;object-fit:cover;border-radius:50%;border:2px solid #d7b58c;}
+ .relationship-pair > svg {width:28px;height:28px;color:#bc5a3b;}
+ .relationship-pair > span {display:flex;align-items:center;justify-content:center;flex-direction:column;background:#eae5d7;color:#777251;}
+ .relationship-pair > span svg {width:32px;height:32px;}.relationship-pair small {font-size:10px;}
+ .relationship-memories {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+ .relationship-memories button {position:relative;background:#fffaf0;padding:4px 4px 8px;border:1px solid #d4bd96;border-radius:10px;color:#645536;cursor:pointer;min-width:0;}
+ .relationship-memories button:disabled {opacity:.55;cursor:default;filter:grayscale(.9);}
+ .memory-art {display:block;aspect-ratio:1;background-image:url('/romance-memories.png');background-size:300% 100%;border-radius:6px;margin-bottom:6px;}
+ .memory-art-0 {background-position:0 0;}.memory-art-1 {background-position:50% 0;}.memory-art-2 {background-position:100% 0;}
+ .relationship-memories button > svg {width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:4px;}
+ .relationship-memories button > span:last-child {font-size:11px;overflow-wrap:anywhere;}
+ .relationship-memories button[aria-pressed=true] {outline:3px solid #9c5737;}
+ .relationship-evidence {border-top:1px solid #d4bd96;margin-top:20px;padding-top:16px;overflow-wrap:anywhere;}
+ .relationship-evidence-heading {display:flex;justify-content:space-between;align-items:center;gap:10px;}
+ .relationship-evidence h3 {font-size:16px;}.relationship-evidence p {font-size:12px;line-height:1.8;}
+ .relationship-evidence blockquote {margin:10px 0;padding:10px 14px;background:#eeeeda;border-radius:10px;}
+ .relationship-evidence blockquote small {font-size:10px;color:#6c614a;}.relationship-evidence blockquote p {margin:4px 0;}
+ .relationship-evidence-pair {border-bottom:1px solid #ded3bd;padding:8px 0;}
+ @media(min-width:950px) {.romance-play-main .romance-stage {height:480px;}}
+ @media(max-width:800px) {.romance-game {padding:16px;}.romance-play-layout {grid-template-columns:1fr;gap:20px;}.relationship-panel {position:static;padding:22px;}.romance-stage {height:350px;}.relationship-map {grid-template-columns:1fr 1fr;gap:12px 36px;}.relationship-node {min-height:120px;}.romance-game .conversation-toolbar {flex-wrap:wrap;gap:10px;}.romance-game .conversation-toolbar > span {order:3;width:100%;}.relationship-panel h2 {font-size:23px;}}
+ @media(prefers-reduced-motion:no-preference) {.relationship-hearts .reached svg {animation:relationship-reveal .35s ease-out;}.relationship-node {transition:background .25s,outline .15s;}@keyframes relationship-reveal {from {transform:scale(.85);opacity:.6;}to {transform:scale(1);opacity:1;}}}
+}
