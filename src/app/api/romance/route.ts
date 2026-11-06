@@ -6,6 +6,7 @@ import {readRomance,saveRomance,removeRomance,romanceTTL,expireRomanceSaves} fro
 import {checkOrigin,readBody,locked,rateLimit,ApiError,outputGuard} from '@/lib/server/security';
 import {isDemo,llmMode} from '@/lib/server/config';
 import {generate,languageInstruction} from '@/lib/server/llm';
+import {requestOrigin} from '@/lib/request-origin';
 export const runtime='nodejs';
 const inputSchema=z.object({op:z.enum(['get','reply','next','forget','delete','feeling','practice','restore']),story:z.enum(['mira','asha']).default('mira'),locale:z.enum(['ja','en']),revision:z.number().int().nonnegative().optional(),turnId:z.string().uuid().optional(),option:z.number().int().min(0).max(2).optional(),message:z.string().trim().min(1).max(1200).optional(),memoryId:z.string().uuid().optional(),feeling:z.enum(['natural','effort','unsure']).optional()}).strict();
 export async function POST(request:NextRequest){
@@ -51,7 +52,7 @@ export async function POST(request:NextRequest){
  }
  state.updatedAt=Date.now();await saveRomance(token,state);
  const {receipts:privateReceipts,practiceBase,...publicState}=state;void privateReceipts;
- const response=NextResponse.json({state:{...publicState,practice:!!practiceBase},fallback});response.cookies.set(cookieName,token,{httpOnly:true,sameSite:'strict',secure:request.nextUrl.protocol==='https:',path:'/',maxAge:romanceTTL/1000});response.headers.set('Cache-Control','no-store');return response;
+ const response=NextResponse.json({state:{...publicState,practice:!!practiceBase},fallback});response.cookies.set(cookieName,token,{httpOnly:true,sameSite:'strict',secure:requestOrigin(request).startsWith('https:'),path:'/',maxAge:romanceTTL/1000});response.headers.set('Cache-Control','no-store');return response;
  });
  }catch(error){const status=error instanceof ApiError?error.status:error instanceof z.ZodError?400:500;return NextResponse.json({error:error instanceof ApiError?error.message:'処理できませんでした。再読み込みしてお試しください。 / Please reload and try again.'},{status});}
 }

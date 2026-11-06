@@ -5,6 +5,7 @@ import { z } from "zod";
 import { cleanup, state, type Identity } from "./store";
 import { isDemo } from "./config";
 import { translate, type Locale } from "../i18n";
+import { requestOrigin } from "../request-origin";
 
 export class ApiError extends Error { constructor(public status: number, message: string) { super(message); } }
 const cookieName = "masala_session";
@@ -17,10 +18,7 @@ export function rateLimit(key: string, max = 40, windowMs = 60_000) {
 }
 export function checkOrigin(request: NextRequest) {
   const origin = request.headers.get("origin");
-  // Next may normalize loopback request.url to localhost; use the actual Host header.
-  const expected = new URL(request.url);
-  expected.host = request.headers.get("host") || expected.host;
-  if (origin && origin !== expected.origin) throw new ApiError(403, "この送信元からは操作できません。");
+  if (origin && origin !== requestOrigin(request)) throw new ApiError(403, "この送信元からは操作できません。");
   if (request.headers.get("sec-fetch-site") === "cross-site") throw new ApiError(403, "この送信元からは操作できません。");
 }
 export function identity(request: NextRequest): Identity {
@@ -61,7 +59,7 @@ export function createIdentity(request: NextRequest, assertion?: string) {
   return { identity: session, token };
 }
 export function setIdentityCookie(response: NextResponse, token: string, request: NextRequest) {
-  response.cookies.set(cookieName, token, { httpOnly: true, sameSite: "strict", secure: request.nextUrl.protocol === "https:", path: "/", maxAge: 8 * 60 * 60 });
+  response.cookies.set(cookieName, token, { httpOnly: true, sameSite: "strict", secure: requestOrigin(request).startsWith("https:"), path: "/", maxAge: 8 * 60 * 60 });
 }
 export async function readBody(request: NextRequest) {
   // Enforce a limit on streamed/chunked requests as well as Content-Length.

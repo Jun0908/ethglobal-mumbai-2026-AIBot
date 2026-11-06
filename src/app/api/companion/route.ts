@@ -1,4 +1,5 @@
 import {NextRequest,NextResponse} from 'next/server';
+import {requestOrigin} from '@/lib/request-origin';
 import {z} from 'zod';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {identity,checkOrigin,readBody,locked,ApiError,outputGuard} from '@/lib/server/security';
@@ -51,6 +52,6 @@ export async function POST(request:NextRequest){try{
  }
  }
  if(capsule){const latest=await loadCapsule(capsule.personaId);if(!latest.consent.simulationApproved||latest.version!==capsule.version)throw new ApiError(403,'Persona changed');}
- await saveCompanion(key,s);const {receipts,...publicState}=s;void receipts;void topicLabels;const response=NextResponse.json({state:publicState,fallback},{headers:{'Cache-Control':'no-store'}});response.cookies.set('masala_companion',browserToken,{httpOnly:true,sameSite:'strict',secure:request.nextUrl.protocol==='https:',path:'/',maxAge:30*86400});return response;
+ await saveCompanion(key,s);const {receipts,...publicState}=s;void receipts;void topicLabels;const response=NextResponse.json({state:publicState,fallback},{headers:{'Cache-Control':'no-store'}});response.cookies.set('masala_companion',browserToken,{httpOnly:true,sameSite:'strict',secure:requestOrigin(request).startsWith('https:'),path:'/',maxAge:30*86400});return response;
  });
  }catch(e){return NextResponse.json({error:e instanceof ApiError?e.message:'処理できませんでした。 / Please try again.'},{status:e instanceof ApiError?e.status:e instanceof z.ZodError?400:500});}}
