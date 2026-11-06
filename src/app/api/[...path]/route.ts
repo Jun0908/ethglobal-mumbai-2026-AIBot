@@ -1,4 +1,4 @@
-import { photoPersona } from "@/lib/photo-persona";
+import { photoPersona,photoChoicesSchema } from "@/lib/photo-persona";
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -55,7 +55,7 @@ async function dispatch(path: string, body: unknown, person: Identity, locale: L
       return {visual:capsule.visual??null};
     }
     case "persona/photos": {
-      const input=z.object({choices:z.array(z.array(z.number().int().min(0).max(3)).max(2)).length(3),voice:z.enum(['natural','gentle','playful'])}).strict().parse(body);
+      const input=z.object({choices:photoChoicesSchema,voice:z.enum(['natural','gentle','playful'])}).strict().parse(body);
       const draft=createDraft(person.ownerId,photoPersona(input.choices,input.voice,locale));
       draft.visual=input;
       return {draftId:draft.id,content:draft.content};

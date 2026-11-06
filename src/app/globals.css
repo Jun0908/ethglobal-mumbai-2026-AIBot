@@ -591,3 +591,19 @@
  .conversation-memory-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:18px 0;}.conversation-memory-grid>button {border:1px solid #d0bc96;border-radius:16px;padding:10px;background:#fffaf0;text-align:left;color:#50563b;cursor:pointer;}.conversation-memory-grid .preference-photo {aspect-ratio:1;border-radius:10px;}.conversation-memory-grid small {display:block;margin:12px 0 6px;}.conversation-memory-grid p {font-size:13px;line-height:1.7;overflow-wrap:anywhere;}
  @media(max-width:700px){.conversation-memory-grid {grid-template-columns:1fr 1fr;}}
 }
+
+@layer masala {
+ .photo-builder .preference-photo[class*="extra-photo-"] {background-image:url('/preference-photos-extra.png');}
+ .extra-photo-0 {background-position:0.000000% 0%;}
+ .extra-photo-1 {background-position:33.333333% 0%;}
+ .extra-photo-2 {background-position:66.666667% 0%;}
+ .extra-photo-3 {background-position:100.000000% 0%;}
+ .extra-photo-4 {background-position:0.000000% 50%;}
+ .extra-photo-5 {background-position:33.333333% 50%;}
+ .extra-photo-6 {background-position:66.666667% 50%;}
+ .extra-photo-7 {background-position:100.000000% 50%;}
+ .extra-photo-8 {background-position:0.000000% 100%;}
+ .extra-photo-9 {background-position:33.333333% 100%;}
+ .extra-photo-10 {background-position:66.666667% 100%;}
+ .extra-photo-11 {background-position:100.000000% 100%;}
+}

@@ -1,4 +1,5 @@
 import "server-only";
+import {photoChoicesSchema} from "../photo-persona";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { randomBytes, randomUUID } from "node:crypto";
@@ -12,7 +13,7 @@ import { isDemo } from "./config";
 export const capsuleSchema = z.object({
   personaId: z.string().uuid(), ownerId: z.string(), version: z.number().int().positive(),
   content: personaContentSchema,
-  visual: z.object({choices:z.array(z.array(z.number().int().min(0).max(3)).max(2)).length(3),voice:z.enum(["natural","gentle","playful"])}).optional(),
+  visual: z.object({choices:photoChoicesSchema,voice:z.enum(["natural","gentle","playful"])}).optional(),
   boundaries: z.object({ revealPrivateInformation: z.literal(false), allowSensitiveQuestions: z.literal(false) }),
   consent: z.object({ simulationApproved: z.boolean(), approvedAt: z.string().nullable() }),
 });

@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {photoPersona} from '../src/lib/photo-persona';
+import {photoPersona,photoChoicesSchema,photoCount} from '../src/lib/photo-persona';
 import {newCompanion,dashboardTopics,forgetExchange,explicitTopic} from '../src/lib/companion';
 test('photos express preferences without inventing personality or biography',()=>{
  const p=photoPersona([[0,1],[],[0]],'natural','en');assert.deepEqual(p.personality.values,['Café','Beach','Photography']);assert.equal(p.personality.socialStyle,null);assert.equal(p.conflictBehavior.repairStyle,null);assert.equal(p.communication.tone,null);assert.equal(photoPersona([[],[],[]],'gentle','ja').behaviorExamples.length,0);
@@ -13,3 +13,8 @@ test('scripted game progress does not count as a lively free conversation',()=>{
 });
 
 test('explicit topic tagging requires words in both actual speakers messages',()=>{assert.equal(explicitTopic('私は写真を撮りました','私も写真を撮るのが好き'),'photos');assert.equal(explicitTopic('写真が好き','そうなんですね'),undefined);});
+
+test('six photo themes preserve all preferences and migrate three-theme saves',()=>{
+ const legacy=photoChoicesSchema.parse([[0],[],[2]]);assert.equal(legacy.length,photoCount);assert.deepEqual(legacy.slice(0,3),[[0],[],[2]]);assert.deepEqual(legacy.slice(3),[[],[],[]]);
+ const choices=photoChoicesSchema.parse(Array.from({length:photoCount},()=>[0,1]));const content=photoPersona(choices,'natural','en');assert.equal(content.personality.values.length,12);assert.ok(content.personality.values.includes('Historic town'));assert.ok(content.personality.values.includes('Reading'));assert.ok(content.personality.values.includes('Movie at home'));assert.equal(content.personality.socialStyle,null);assert.throws(()=>photoChoicesSchema.parse(Array.from({length:7},()=>[])));assert.throws(()=>photoChoicesSchema.parse([[4],[],[]]));
+});

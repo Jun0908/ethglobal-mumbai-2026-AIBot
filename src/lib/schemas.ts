@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const trait = z.string().max(500).nullable();
 export const personaContentSchema = z.object({
-  personality: z.object({ socialStyle: trait, humor: trait, values: z.array(z.string().max(100)).max(8), relationshipPace: trait }),
+  personality: z.object({ socialStyle: trait, humor: trait, values: z.array(z.string().max(100)).max(16), relationshipPace: trait }),
   communication: z.object({ tone: trait, sentenceLength: trait, asksFollowUpQuestions: z.boolean().nullable(), handlesSilence: trait }),
   behaviorExamples: z.array(z.object({ situation: z.string().max(300), response: z.string().max(500), tendency: z.string().max(150) })).max(8),
   conflictBehavior: z.object({ initialReaction: trait, repairStyle: trait }),
