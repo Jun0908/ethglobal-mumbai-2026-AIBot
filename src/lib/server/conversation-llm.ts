@@ -3,7 +3,7 @@ import { z } from "zod";
 import { dialogueSchema, type PersonaContent } from "../schemas";
 import { type Conversation, type ConversationMessage } from "../conversation";
 import { reflectionSchema, validateReflection, type Reflection } from "../reflection";
-import { storyContext, rainStory, storyText, type RainStory } from "../rain-story";
+import { storyContext, storyText, type RainStory } from "../rain-story";
 import type { Locale } from "../i18n";
 import { generate, languageInstruction } from "./llm";
 import { llmMode } from "./config";
@@ -29,10 +29,13 @@ export async function playerSuggestions(current: Conversation, player: string, c
 }
 export async function conversationReply(persona: PersonaContent, current: Conversation, message: string, locale: Locale, event?: { before: RainStory; choiceId: string }) {
   if (!event && current.story.gameResult && /誰が|正解は|who.*guess|correct answer/i.test(message)) {
-    return schema.parse({ dialogue: storyText(current.story.gameResult, locale), emotion: "happy", tone: "warm", conversationEvent: "connection", suggestedNextAction: "continue", suggestions: locale === "en" ? ["That was fun!", "Let's take a break.", "What should we do next time?"] : ["楽しかったね！", "少しひと休みしよう。", "次に会うなら何をしよう？"] });
+    return schema.parse({ dialogue: storyText(current.story.gameResult, locale).replace("相手はヒントを出した。", "私はヒント係だったね。").replace("your companion gave the clue", "I gave the clue"), emotion: "happy", tone: "warm", conversationEvent: "connection", suggestedNextAction: "continue", suggestions: locale === "en" ? ["That was fun!", "Let's take a break.", "What should we do next time?"] : ["楽しかったね！", "少しひと休みしよう。", "次に会うなら何をしよう？"] });
   }
   if (event && (current.story.node === "guessing" || event.before.node === "guessing")) {
-    const dialogue = current.story.node === "guessing" ? storyText(rainStory.guessing.description, locale) : storyText(current.story.gameResult!, locale);
+    const dialogue = current.story.node === "guessing"
+      ? locale === "en" ? "Here's your clue: sweet, warm and woody, often used in baking. Which spice is it?" : "じゃあ私から出すね。甘くて、木のような温かい香り。お菓子にも使うよ。何のスパイスでしょう？"
+      : locale === "en" ? event.choiceId === "answer-cinnamon" ? "Yes, cinnamon! You got it. That warm, sweet smell gave it away." : "Good try! It was cinnamon. Ginger has a sharper kick. Let's take a little chai break."
+      : event.choiceId === "answer-cinnamon" ? "正解、シナモン！ あの甘くて温かい香り、わかったね。" : "惜しい！ 正解はシナモン。ジンジャーはもう少しピリッとした香りだよ。ちょっとチャイでひと休みしよう。";
     return schema.parse({ dialogue, emotion: "happy", tone: "playful", conversationEvent: "connection", suggestedNextAction: "continue", suggestions: current.story.node === "guessing" ? [] : locale === "en" ? ["That was fun!", "Let's take a break.", "What should we do next time?"] : ["楽しかったね！", "少しひと休みしよう。", "次に会うなら何をしよう？"] });
   }
   if (llmMode() === "demo") {
