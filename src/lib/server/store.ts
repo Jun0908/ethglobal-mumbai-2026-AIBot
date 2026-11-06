@@ -24,7 +24,8 @@ type State = {
 };
 const root = globalThis as typeof globalThis & { masalaState?: State };
 export const state: State = root.masalaState ??= { identities: new Map(), drafts: new Map(), games: new Map(), limits: new Map(), locks: new Set(), requests: new Map() };
-const dataDir = () => resolve(process.env.PERSONA_DATA_DIR || ".data/personas");
+// Runtime-only private storage must never become part of the deployment trace.
+const dataDir = () => resolve(/* turbopackIgnore: true */ process.env.PERSONA_DATA_DIR || ".data/personas");
 
 async function loadKey() {
   const supplied = process.env.PERSONA_ENCRYPTION_KEY?.trim();

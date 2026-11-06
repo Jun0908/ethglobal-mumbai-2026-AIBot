@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const config: NextConfig = {
   turbopack: { root: process.cwd() },
+  outputFileTracingExcludes: { "/*": ["./.env*", "./.data/**/*", "./.git/**/*"] },
   poweredByHeader: false,
   async headers() {
     return [{ source: "/:path*", headers: [
