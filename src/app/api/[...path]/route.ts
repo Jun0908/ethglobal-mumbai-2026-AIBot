@@ -10,6 +10,7 @@ import { agentReply, extractPersona, nextQuestion, revisePersona } from "@/lib/s
 import { demoPersona } from "@/lib/server/demo";
 import { sendDateRequest, verifyMatch } from "@/lib/server/matching";
 import { readLocale, translate, type Locale } from "@/lib/i18n";
+import { interviewProgress } from "@/lib/interview";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,7 +41,8 @@ async function dispatch(path: string, body: unknown, person: Identity, locale: L
     case "interview/next": {
       const input = z.object({ answers: z.array(answerSchema).max(12), skipped: z.number().int().min(0).max(12), sendApproved: z.literal(true) }).strict().parse(body);
       ensureNoPrivateText(input.answers);
-      return nextQuestion(input.answers, input.skipped, locale);
+      if (interviewProgress(input.answers.length, input.skipped).finished) return { completed: true, question: null };
+      return { ...await nextQuestion(input.answers, input.skipped, locale), completed: false };
     }
     case "persona/extract": {
       const input = approvedAnswersSchema.parse(body);

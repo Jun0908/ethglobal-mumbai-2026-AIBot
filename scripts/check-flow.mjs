@@ -24,6 +24,9 @@ const answers = [
 ];
 await owner("interview/next", { answers, skipped: 0, sendApproved: false }, 400);
 await owner("interview/next", { answers, skipped: 0, sendApproved: true });
+for (const [approved, skipped] of [[[], 6], [answers, 4], [[...answers, ...answers, ...answers], 0]]) {
+  assert.deepEqual(await owner("interview/next", { answers: approved, skipped, sendApproved: true }), { completed: true, question: null });
+}
 await owner("persona/extract", { answers: [{ question: "連絡先", summary: "test@example.com" }], sendApproved: true }, 422);
 const draft = await owner("persona/extract", { answers, sendApproved: true });
 assert(draft.content.behaviorExamples.length > 0);
