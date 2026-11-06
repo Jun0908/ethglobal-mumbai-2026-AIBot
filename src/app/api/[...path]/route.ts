@@ -12,6 +12,7 @@ import { sendDateRequest, verifyMatch } from "@/lib/server/matching";
 import { readLocale, translate, type Locale } from "@/lib/i18n";
 import { interviewProgress } from "@/lib/interview";
 import { chooseStory, newRainStory, rainStory, storyContext, storyText } from "@/lib/rain-story";
+import { dispatchConversation } from "@/lib/server/conversation-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,6 +39,7 @@ function ownedGame(id: string, ownerId: string) {
   return game;
 }
 async function dispatch(path: string, body: unknown, person: Identity, locale: Locale) {
+  if (path.startsWith("dialogue/")) return dispatchConversation(path, body, person, locale);
   switch (path) {
     case "interview/next": {
       const input = z.object({ answers: z.array(answerSchema).max(12), skipped: z.number().int().min(0).max(12), sendApproved: z.literal(true) }).strict().parse(body);
