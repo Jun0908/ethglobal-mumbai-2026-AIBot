@@ -1,4 +1,5 @@
 "use client";
+import { characterArt } from "@/lib/character-art";
 import { useEffect, useRef, useState } from "react";
 import type { publicGame } from "@/lib/game";
 import type { Locale } from "@/lib/i18n";
@@ -31,7 +32,7 @@ export default function RainGame({ game, locale, partner, busy, demo, dateResult
     <header className="rain-heading"><div><p className="eyebrow">A MONSOON MEET-CUTE · {partner}</p><h2 ref={heading} tabIndex={-1}>{game.completed ? endingTitle : storyText(beat.title, locale)}</h2></div><span className="rain-progress">{game.completed ? pick("物語が完成", "Story complete") : `${story.choices.length + 1} / 3 · ${pick("選んで進む", "Choose your next step")}`}</span></header>
     <p className="rain-intro">{game.completed ? pick("同じ雨の日でも、選ぶ道で思い出は変わります。別の選択も試してみよう。", "The same rainy day can hold a different story. Try another path and see what changes.") : pick("3つの選択で、雨の日のデートをつくろう。ボタンを押すと物語が進みます。", "Make this rainy date your own in three choices. Choose an action to move the story forward.")}</p>
     <div className="rain-layout">
-      <div className="rain-character"><div className={`date-stage emotion-${game.emotion} ${game.completed ? "" : "rainy"}`}><img src="/chai-date.png" alt={pick("架空の成人キャラクターのポートレート", "Portrait of a fictional adult character")}/><span className="stage-location">{pick("相手のイメージ", "CHARACTER PORTRAIT")}</span><div className="scene-caption"><p className="eyebrow">{game.completed ? "AFTER THE RAIN" : "MUMBAI · MONSOON"}</p><h3>{partner}</h3><p>{demo ? pick("架空の相手とのデート体験", "A date with a fictional companion") : pick("承認された会話傾向を持つAI", "An AI using approved conversation patterns")}</p></div></div>
+      <div className="rain-character"><div className={`date-stage emotion-${game.emotion} ${game.completed ? "" : "rainy"}`}><img src={characterArt(partner).src} style={{ objectPosition: characterArt(partner).position }} alt={pick("架空の成人キャラクターのポートレート", "Portrait of a fictional adult character")}/><span className="stage-location">{pick("相手のイメージ", "CHARACTER PORTRAIT")}</span><div className="scene-caption"><p className="eyebrow">{game.completed ? "AFTER THE RAIN" : "MUMBAI · MONSOON"}</p><h3>{partner}</h3><p>{demo ? pick("架空の相手とのデート体験", "A date with a fictional companion") : pick("承認された会話傾向を持つAI", "An AI using approved conversation patterns")}</p></div></div>
         <div className="rain-reaction" aria-live="polite"><span className="eyebrow">{partner}</span>{busy ? <p role="status">{pick("返答を考えています…", "Thinking of a reply…")}</p> : <p>{lastReply || pick("外は突然の雨。あなたなら、このあとどう過ごす？", "The rain has caught us by surprise. What would you like to do?")}</p>}</div>
       </div>
       <div className="rain-decisions">

@@ -25,9 +25,11 @@ Implementation is in progress. Completed checks are recorded in the commits and 
 - `src/app/api/` and `src/lib/server/matching.ts`: owner-authorized APIs, consent revocation and matching integration contract.
 - `scripts/check-flow.mjs`: API flow checks using fictional adult inputs; actual scripted-mode flow passed.
 - `src/components/masala-app.tsx` and `src/app/globals.css`: Codex-assisted responsive interview, calibration and dating interface; browser checks used fictional adult inputs.
-- `public/chai-date.png`: generated with OpenAI image generation, depicting an original fictional adult Indian character aged 27 in a Mumbai cafe. Shared illustration used for both fictional demo personas with CSS emotion effects; no actual person is depicted.
+- `public/chai-date.png`: generated with OpenAI image generation, depicting an original fictional adult Indian character aged 27 in a Mumbai cafe. Originally shared by both demo personas; now used for Asha. No actual person is depicted.
 - `scripts/check-live.mjs`, `scripts/check-security.mjs`, `scripts/check-artifacts.mjs`: live-provider, invalid-input/rate-limit and build-artifact checks.
 - `src/lib/i18n.ts`, language-aware APIs and UI, `tests/i18n.test.ts`, `scripts/check-languages.mjs`: Codex-assisted JP/EN translations, saved language preference, new-response language selection and preservation checks.
+
+- `public/mira-portrait.png`: generated with the built-in image generation tool as a distinct original fictional 27-year-old Indian woman. Asha was a style reference. Final prompt recorded in `docs/MIRA_ARTWORK.md`.
 
 ## Direction artifacts
 
