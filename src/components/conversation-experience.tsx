@@ -28,6 +28,7 @@ export default function ConversationExperience({ locale, demo, initialTarget, on
   const busyRef = useRef(false);
   const booted = useRef(false);
   const currentRef = useRef(current); currentRef.current = current;
+  const localeRef = useRef(locale); localeRef.current = locale;
   const turnIds = useRef(new Map<string, string>());
   const transcript = useRef<HTMLDivElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -91,7 +92,7 @@ export default function ConversationExperience({ locale, demo, initialTarget, on
     try {
       const report = await post<Reflection>("reflection", { gameId: id });
       setCurrent(c => c?.id === id ? { ...c, reports: [...c.reports.filter(r => !(r.locale === report.locale && r.revision <= report.revision)), report].sort((a, b) => a.revision - b.revision) } : c);
-      setSessions(previous => previous.map(s => s.id === id ? { ...s, report: !s.report || s.report.revision <= report.revision ? report : s.report } : s));
+      if (report.locale === localeRef.current) setSessions(previous => previous.map(s => s.id === id ? { ...s, report: !s.report || s.report.revision <= report.revision ? report : s.report } : s));
     } catch (e) { setReflectionError(e instanceof Error ? e.message : pick("振り返りを作れませんでした。", "Could not generate a reflection.")); }
     finally { setAnalyzing(false); }
   }
@@ -149,6 +150,7 @@ export default function ConversationExperience({ locale, demo, initialTarget, on
       </aside></div>
       {showReflection && <section ref={reflectionPanel} tabIndex={-1} className="reflection-panel" aria-label={pick("相性の振り返り", "Compatibility reflection")}><div className="section-heading"><div><p className="eyebrow">YOUR CONVERSATION, NOT A SCORE</p><h3>{pick("今回の会話を振り返る", "Reflect on this conversation")}</h3></div><button className="link-button" onClick={() => setShowReflection(false)}>{pick("閉じる", "Close")}</button></div><p>{pick("これはAIの見立てです。恋愛の成功確率や、実際の相手の感情を示すものではありません。引用を見て、自分の感覚と比べてください。", "This is an AI interpretation, not a prediction of romantic success or a real person's feelings. Check the quotes against your experience.")}</p>
         {analyzing && <p role="status">{pick("分析中も会話を続けられます。", "You can keep talking while the reflection is being prepared.")}</p>}{reflectionError && <p role="alert">{reflectionError} <button className="link-button" disabled={analyzing} onClick={() => void reflect()}>{pick("再試行", "Retry")}</button></p>}
+        {!report && !analyzing && !reflectionError && <button className="button secondary" onClick={() => void reflect()}>{pick("日本語で振り返りを作る", "Create an English reflection")}</button>}
         {report && <><p className="small">{pick("会話の時点：", "Conversation snapshot: ")}{report.revision}{report.revision < current.revision && ` · ${pick("その後の会話があります。更新すると反映されます。", "More conversation has happened. Update to include it.")}`}</p><div className="reflection-grid">{report.dimensions.map(d => {
           const dismissed = current.dismissed.includes(`${report.id}:${d.dimension}`);
           return <article className="reflection-dimension" key={d.dimension}><span className={`observation ${d.observation}`}>{dismissed ? pick("解釈を取り消しました", "Interpretation dismissed") : label(observations[d.observation])}</span><h4>{label(dimensions[d.dimension])}</h4>{!dismissed && <><p>{d.interpretation}</p>{d.evidence.map(e => <button className="evidence-quote" key={e.messageId} onClick={() => jump(e.messageId)}><small>{e.role === "user" ? pick("あなた", "You") : current.partnerName}{e.kind === "suggested_reply" && ` · ${pick("選択した返答", "Selected reply")}`}</small><span>“{e.quote}”</span><small>{pick("元の会話を見る ↗", "View in conversation ↗")}</small></button>)}<p className="small muted">{d.unknowns}</p></>}<button className="link-button" disabled={busy} onClick={() => void run(async () => accept(await post<PublicConversation>("feedback", { gameId: current.id, dismiss: { reportId: report.id, dimension: d.dimension, dismissed: !dismissed } })))}>{dismissed ? pick("解釈を戻す", "Restore interpretation") : pick("この解釈は違う", "This interpretation feels wrong")}</button></article>;
