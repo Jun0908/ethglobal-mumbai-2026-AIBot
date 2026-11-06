@@ -6,7 +6,7 @@ import type { Reflection } from "@/lib/reflection";
 import type { Locale } from "@/lib/i18n";
 import { rainStory, storyChoices, storyText } from "@/lib/rain-story";
 import CafeScene from "./cafe-scene";
-import { cafeTitles } from "@/lib/cafe-adventure";
+import { cafeStages, cafeTitles } from "@/lib/cafe-adventure";
 
 export type ConversationTarget = { id: string; matchId: string };
 type Props = { locale: Locale; demo: boolean; initialTarget: ConversationTarget | null; onHome: () => void; onBusyChange: (busy: boolean) => void };
@@ -34,6 +34,7 @@ export default function ConversationExperience({ locale, demo, initialTarget, on
   const localeRef = useRef(locale); localeRef.current = locale;
   const turnIds = useRef(new Map<string, string>());
   const transcript = useRef<HTMLDivElement>(null);
+  const latestReply = useRef<HTMLElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const reflectionPanel = useRef<HTMLElement>(null);
   async function post<T>(path: string, body: unknown): Promise<T> {
@@ -73,6 +74,7 @@ export default function ConversationExperience({ locale, demo, initialTarget, on
   }, [locale]);
   useEffect(() => { if (transcript.current) transcript.current.scrollTop = transcript.current.scrollHeight; }, [current?.id, current?.revision]);
   useEffect(() => { heading.current?.focus(); }, [current?.id]);
+  useEffect(() => { if (current?.adventure && current.revision > 0) latestReply.current?.focus({ preventScroll: true }); }, [current?.id, current?.revision]);
   useEffect(() => { if (showReflection) { reflectionPanel.current?.scrollIntoView({ block: "start" }); reflectionPanel.current?.focus({ preventScroll: true }); } }, [showReflection]);
 
   async function send(path: "message" | "action", fields: { message?: string; suggestionId?: string; choiceId?: string }) {
@@ -83,7 +85,7 @@ export default function ConversationExperience({ locale, demo, initialTarget, on
     const ok = await run(async () => {
       const c = await post<PublicConversation>(path, { ...body, clientTurnId });
       accept(c); turnIds.current.delete(key);
-      if (path === "message") { setDrafts(previous => ({ ...previous, [c.id]: "" })); setOther(c.adventure?.stage === "complete"); }
+      if (path === "message") { setDrafts(previous => ({ ...previous, [c.id]: "" })); setOther(false); }
       else setActionsOpen(false);
     });
     return ok;
@@ -113,7 +115,7 @@ export default function ConversationExperience({ locale, demo, initialTarget, on
   const currentNodeTurns = current?.messages.filter(m => m.role === "user" && m.kind !== "story_action" && m.sceneNode === current.story.node).length ?? 0;
   const adventure = current?.adventure;
   function renderMessage(m: PublicConversation["messages"][number]) {
-    return <article tabIndex={-1} id={`message-${m.id}`} key={m.id} className={`dialogue-bubble ${m.role} ${m.kind === "story_action" ? "story-action" : ""}`}><strong>{m.role === "user" ? pick("あなた", "You") : current?.partnerName}{m.kind === "story_action" && ` · ${pick("物語の行動", "Story action")}`}</strong><p>{m.text}</p>{m.kind === "suggested_reply" && <small>{pick("選択した返答", "Selected reply")}</small>}</article>;
+    return <article ref={m.id === current?.messages.at(-1)?.id ? latestReply : undefined} tabIndex={-1} id={`message-${m.id}`} key={m.id} className={`dialogue-bubble ${m.role} ${m.kind === "story_action" ? "story-action" : ""}`}><strong>{m.role === "user" ? pick("あなた", "You") : current?.partnerName}{m.kind === "story_action" && ` · ${pick("物語の行動", "Story action")}`}</strong><p>{m.text}</p>{m.kind === "suggested_reply" && <small>{pick("選択した返答", "Selected reply")}</small>}</article>;
   }
 
   return <section className={`conversation-workspace ${adventure ? "cafe-adventure" : ""}`}>
@@ -122,9 +124,9 @@ export default function ConversationExperience({ locale, demo, initialTarget, on
     {!current ? <>
       <header className="conversation-heading"><p className="eyebrow">MEET. TALK. DISCOVER.</p><h2>{pick("誰と、もう少し話したい？", "Who would you like to know better?")}</h2><p>{pick("会話から、合うところも違うところも見つけよう。まだ話していない相手との相性は分かりません。", "Discover shared preferences and differences through conversation. Untalked-to companions have no compatibility assessment.")}</p></header>
       {!loaded && <p role="status">{pick("会話を読み込んでいます…", "Loading conversations…")}</p>}
-      {demo && <div className="companion-grid">{[{ id: "demo-calm", name: "Asha", intro: pick("静かな時間と、ゆっくり深まる会話。", "Quiet moments and conversations that deepen slowly."), tag: "THE THOUGHTFUL ONE" }, { id: "demo-playful", name: "Mira", intro: pick("軽い冗談と、予定外の小さな発見。", "Playful humor and little unexpected discoveries."), tag: "THE SPONTANEOUS ONE" }].map(p => {
+      {demo && <div className="companion-grid">{[{ id: "demo-calm", name: "Asha", intro: pick("静かな時間と、ゆっくり深まる会話。", "Quiet moments and conversations that deepen slowly."), tag: "THE THOUGHTFUL ONE" }, { id: "demo-playful", name: "Mira", intro: pick("お互いのチャイを選ぼう。会話の選択で、ふたりの思い出が変わるデート。", "Choose chai for each other. Your replies shape a rainy-day keepsake."), tag: "THE SPONTANEOUS ONE" }].map(p => {
         const session = sessions.find(s => s.partnerRef === p.id);
-        return <article className={`companion-tile ${p.id}`} key={p.id}><img className="companion-portrait" src={characterArt(p.id).src} style={{ objectPosition: characterArt(p.id).position }} alt={pick(`${p.name}のイメージ・架空の成人`, `${p.name}, a fictional adult companion`)}/><span className="eyebrow">{p.tag}</span><h3>{p.name}</h3><p>{p.intro}</p><p className="small">{session ? session.report ? pick("振り返りあり", "Reflection available") : pick("会話中", "Conversation started") : pick("未会話・相性は未確認", "Not yet talked · no assessment")}</p><button className="button primary" disabled={busy} onClick={() => void open({ id: p.id, matchId: "demo-match" })}>{session ? pick("続きから話す", "Continue talking") : pick("話してみる", "Start talking")} →</button><small>{pick("架空の成人キャラクター", "Fictional adult companion")}</small></article>;
+        return <article className={`companion-tile ${p.id}`} key={p.id}><img className="companion-portrait" src={characterArt(p.id).src} style={{ objectPosition: characterArt(p.id).position }} alt={pick(`${p.name}のイメージ・架空の成人`, `${p.name}, a fictional adult companion`)}/><span className="eyebrow">{p.tag}</span><h3>{p.name}</h3><p>{p.intro}</p><p className="small">{session ? session.report ? pick("振り返りあり", "Reflection available") : pick("会話中", "Conversation started") : pick("未会話・相性は未確認", "Not yet talked · no assessment")}</p><button className="button primary" disabled={busy} onClick={() => void open({ id: p.id, matchId: "demo-match" })}>{session ? pick("続きから話す", "Continue talking") : p.id === "demo-playful" ? pick("チャイデートを遊ぶ", "Play the chai date") : pick("話してみる", "Start talking")} →</button><small>{pick("架空の成人キャラクター", "Fictional adult companion")}</small></article>;
       })}</div>}
       <section className="comparison-section"><h3>{pick("ふたりとの会話を比べる", "Compare your conversations")}</h3><p className="small muted">{pick("各相手との最新のデートを、同じ4つの観点で見比べます。会話量の違いも確認してください。", "Compare the latest date with each companion across four dimensions. Consider the different amounts of conversation too.")}</p>
         <div className="comparison-grid">{(demo ? ["demo-calm", "demo-playful"] : latestPerPartner.map(s => s.partnerRef)).map(ref => {
@@ -139,13 +141,14 @@ export default function ConversationExperience({ locale, demo, initialTarget, on
     </> : <>
       <header className={`conversation-heading ${current.partnerRef.startsWith("demo-") ? "with-portrait" : ""}`}>{current.partnerRef.startsWith("demo-") && <img className="conversation-heading-portrait" src={characterArt(current.partnerRef).src} style={{ objectPosition: characterArt(current.partnerRef).position }} alt={pick(`${current.partnerName}のイメージ・架空の成人`, `${current.partnerName}, a fictional adult companion`)}/>}<p className="eyebrow">A LITTLE CHAI. A LITTLE CURIOSITY.</p><h2 ref={heading} tabIndex={-1}>{current.partnerName}{pick("と、もう少し。", ", a little longer.")}</h2><p>{adventure ? pick("お互いにチャイを選んで、ふたりの思い出を作ろう。返事を選ぶと、そのまま出来事が進みます。", "Choose a chai for each other and make a memory. Your replies move the experience forward.") : pick("返答を選んで話す。「次の展開」を選んだときだけ、物語が進みます。", "Choose a reply to talk. Only a story action moves the scene forward.")}</p></header>
       <div className="dialogue-layout"><div className="dialogue-main">
-        {adventure && <p className="cafe-current-step">{cafeTitles[adventure.stage][locale]}</p>}
+        {adventure && <p className="cafe-current-step"><span>{cafeTitles[adventure.stage][locale]}</span><span>{cafeStages.indexOf(adventure.stage)} / 6</span></p>}
         {adventure && current.messages.length > 2 && <details className="cafe-history"><summary>{pick("これまでの会話を読む", "Read the conversation so far")} ({current.messages.length - 2})</summary><div className="cafe-history-messages">{current.messages.slice(0, -2).map(renderMessage)}</div></details>}
         <div className="dialogue-transcript" ref={transcript} role="log" aria-live="polite" aria-relevant="additions" aria-label={pick("会話履歴", "Conversation history")}>
           {(adventure ? current.messages.slice(-2) : current.messages).map(renderMessage)}
         </div>
         {busy && <p className="typing" role="status">{pick("処理しています…", "Working…")}</p>}
         <div className="dialogue-composer"><h3>{adventure ? adventure.stage === "complete" ? pick("まだ話したいことがあれば", "Anything else on your mind?") : pick("あなたは、どうする？", "What would you like to do?") : pick("あなたの返事", "Your reply")}</h3>
+          {adventure?.stage === "complete" && target && <button className="button primary cafe-replay" disabled={busy} onClick={() => void open(target, true)}>{pick("別の選び方で、もう一度遊ぶ", "Play again with different choices")} ↗</button>}
           {limit ? <p role="status">{pick("60往復の区切りです。振り返るか、新しいデートを始められます。", "You've reached 60 exchanges. Reflect or start a new date.")}</p> : <>
             {current.story.node === "guessing" ? <div className="reply-options">{rainStory.guessing.choices.map(c => <button disabled={busy} key={c.id} onClick={() => void send("action", { choiceId: c.id })}>{storyText(c.label, locale)}</button>)}</div> : !other && <div className="reply-options">{current.suggestions.locale === locale && current.suggestions.items.map(s => <button disabled={busy} key={s.id} onClick={() => void send("message", { suggestionId: s.id })}><span>{s.text}{s.hint && <small className="cafe-option-hint">{s.hint}</small>}</span><span aria-hidden="true">↵</span></button>)}<button className="reply-other" disabled={busy} onClick={() => setOther(true)}>{adventure ? pick("もう少し話す・自分で書く", "Talk a little more · write your own") : pick("その他・自分で書く", "Other · write your own")}</button></div>}
             {current.story.node !== "guessing" && other && <form onSubmit={e => { e.preventDefault(); if (draft.trim()) void send("message", { message: draft.trim() }); }}><label htmlFor="conversation-message">{pick("自分の言葉で返す", "Reply in your own words")}</label><textarea autoFocus id="conversation-message" rows={3} maxLength={1200} disabled={busy} value={draft} onChange={e => setDrafts(previous => ({ ...previous, [current.id]: e.target.value }))}/><div className="composer-actions"><button className="button primary" disabled={busy || !draft.trim()}>{pick("返事を送る", "Send reply")}</button><button className="link-button" type="button" disabled={busy} onClick={() => setOther(false)}>{pick("選択肢に戻る", "Back to suggestions")}</button></div></form>}

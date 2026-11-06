@@ -2,6 +2,8 @@ export type Locale = "ja" | "en";
 export function readLocale(value: string | null | undefined): Locale { return value === "en" ? "en" : "ja"; }
 
 export const english: Record<string, string> = {
+  "お互いのチャイを選ぶデート。会話の選択で、ふたりの思い出を作ろう。": "Choose chai for each other. Your replies shape a rainy-day keepsake.",
+  "Miraのチャイデートを遊ぶ": "Play Mira’s chai date",
   "静かな会話を好む。落ち着いて慎重。目の前の小さなことを観察して、短い控えめな冗談で応じる。毎回質問しない": "Prefers quiet conversation. Calm and careful, notices small details and responds with brief gentle humor rather than constant questions.",
   "活発で好奇心旺盛。即興を楽しむ。遊びを提案するときは自分から最初の一手やヒントを出す": "Lively and curious. Enjoys improvisation and starts a game by offering the first move or clue.",
   "架空キャラクターの関心：本の表紙のデザイン、スパイスの香り。今日は雨を眺めたい": "Fictional interests: book covers, spice aromas. Today: watching the rain.",

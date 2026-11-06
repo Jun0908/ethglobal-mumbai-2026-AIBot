@@ -7,7 +7,9 @@
   .cafe-adventure .dialogue-transcript { height: auto; overflow: visible; gap: 12px; padding: 18px; scroll-behavior: auto; }
   .cafe-adventure .dialogue-bubble { padding: 12px 16px; }
   .cafe-adventure .dialogue-bubble p { line-height: 1.75; }
-  .cafe-current-step { padding: 12px 18px; background: #e9eddf; font-size: 13px; font-weight: 700; }
+  .cafe-current-step { display: flex; justify-content: space-between; gap: 16px; padding: 12px 18px; background: #e9eddf; font-size: 13px; font-weight: 700; }
+  .cafe-current-step > span:last-child { white-space: nowrap; }
+  .cafe-replay { margin-bottom: 14px; }
   .cafe-history { border-bottom: 1px solid var(--line); }
   .cafe-history summary { padding: 10px 18px; color: var(--olive); font-size: 12px; cursor: pointer; min-height: 44px; }
   .cafe-history-messages { display: flex; flex-direction: column; gap: 12px; padding: 18px; }

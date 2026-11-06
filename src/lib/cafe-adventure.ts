@@ -116,7 +116,7 @@ export function chooseCafe(a: CafeAdventure, id: string): { adventure: CafeAdven
       if (next.outcome === "individual") next.herCup = "spark";
       next.notice = cafeOutcome(next);
       dialogue = next.outcome === "blend"
-        ? copy("小さなポットでシナモンとジンジャーを合わせてみたら、甘いあとにぴりっとくる！ 私はこれ、好き。予定が崩れたおかげでできた一杯だね。今日に名前をつけるなら？", "We combine cinnamon and ginger in a little pot. Sweet, then a kick! I like this. A blend we found because our plans changed. What shall we call today?")
+        ? copy("店主に二つの味を少しずつもらって、小さなポットで合わせたら、甘いあとにぴりっとくる！ 私はこれ、好き。予定が崩れたおかげでできた一杯だね。今日に名前をつけるなら？", "The owner brings a little of each blend for our small pot. Sweet, then a kick! I like this. A blend we found because our plans changed. What shall we call today?")
         : copy(`じゃあ私はジンジャーとカルダモン。あなたは${cupNames[next.yourCup!].ja}のままで。相手に合わせて替えなくていいの、気楽だね。この時間に名前をつけるなら？`, `Ginger and cardamom for me, and you keep your ${cupNames[next.yourCup!].en.toLowerCase()}. It’s comfortable not having to match. What shall we call this moment?`); break;
     case "cafe-memory-ask":
       dialogue = next.outcome === "blend"
@@ -130,7 +130,7 @@ export function chooseCafe(a: CafeAdventure, id: string): { adventure: CafeAdven
       next.again = id === "cafe-again"; next.stage = "complete";
       next.notice = copy("今日の思い出が完成。別の選び方で、新しいデートも楽しめる。", "Your memory is complete. A new date can take a different path.");
       dialogue = next.again
-        ? copy(`うん、また選ぼう。${next.yourCup === "comfort" ? "あなたはほっとする甘さが好きだったね。" : "あなたは刺激のある味を選んだね。"}次の一杯を考えるの、楽しみにしてる。今日はありがとう！`, `I’d like that. ${next.yourCup === "comfort" ? "You wanted comforting sweetness today." : "You chose a warming kick today."} I’ll look forward to choosing another cup. Thank you for today!`)
+        ? copy(`うん、また選ぼう。${next.yourCup === "comfort" ? "今日はほっとする甘さを選んだね。" : "今日は刺激のある味を選んだね。"}次の一杯を考えるの、楽しみにしてる。今日はありがとう！`, `I’d like that. ${next.yourCup === "comfort" ? "You wanted comforting sweetness today." : "You chose a warming kick today."} I’ll look forward to choosing another cup. Thank you for today!`)
         : copy("こちらこそ、ありがとう。今日の一杯と、このカードはいい思い出になったよ。気をつけて帰ってね。", "Thank you too. Our chai and this little card made a lovely memory. Have a safe trip home."); break;
     default: throw new Error("Unknown cafe action");
   }
