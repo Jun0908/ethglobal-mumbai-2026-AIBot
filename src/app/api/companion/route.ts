@@ -41,7 +41,7 @@ export async function POST(request:NextRequest){try{
  const topic=result?.topic&&result.userQuote.trim().length>=2&&result.partnerQuote.trim().length>=2&&i.message.includes(result.userQuote)&&reply.includes(result.partnerQuote)?result.topic:undefined;
  append(i.message,reply,topic??(result?explicitTopic(i.message,reply):undefined));
  }
- if(i.op==='start'){if(s.game)throw new ApiError(409,'Game already active');const ids=append(p('二人で半日デートを作ろう。','Let us plan half a day together.'),p('まずはあなたから。どこで待ち合わせたい？ 私も次の場所を提案するね。','Your turn first. Where shall we meet? I will suggest our next stop.'),'games');s.game={step:0,places:[],messageIds:ids};}
+ if(i.op==='start'){if(s.game)throw new ApiError(409,'Game already active');const ids=append(p('二人で半日デートを作ろう。','Let us plan half a day together.'),dateReaction(capsule,'intro',i.locale),'games');s.game={step:0,places:[],messageIds:ids};}
  if(i.op==='cancel')s.game=null;
  if(i.op==='choose'){
  if(!s.game||i.choice===undefined)throw new ApiError(409,'No active choice');const g=s.game;const names=[p('カフェ','Café'),p('海辺','Beach'),p('街歩き','City walk'),p('家でゆっくり','At home')];

@@ -8,5 +8,6 @@ export async function GET(request:NextRequest,context:{params:Promise<{token:str
  const url=new URL('/?invited=1',requestOrigin(request));
  const response=NextResponse.redirect(url);
  if(invite&&capsule?.consent.simulationApproved&&capsule.version===invite.version)response.cookies.set('masala_invite',token,{httpOnly:true,sameSite:'lax',secure:url.protocol==='https:',path:'/',maxAge:7*86400});
+ else response.cookies.delete('masala_invite');
  return response;
 }

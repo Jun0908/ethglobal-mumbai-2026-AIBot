@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
+import {writeFile} from 'node:fs/promises';
 const base=process.env.TEST_BASE_URL||'http://127.0.0.1:3000';
 async function call(path,body,cookies='',expected=200){const r=await fetch(base+path,{method:'POST',headers:{'Content-Type':'application/json',Origin:base,Cookie:cookies},body:JSON.stringify(body)});const data=await r.json();assert.equal(r.status,expected,JSON.stringify(data));return {data,cookie:r.headers.getSetCookie()?.map(v=>v.split(';')[0]).join('; ')||''};}
 const owner=(await call('/api/session',{adultConfirmed:true})).cookie;
 const visitor=(await call('/api/session',{adultConfirmed:true})).cookie;
 const other=(await call('/api/session',{adultConfirmed:true})).cookie;
-const visual={choices:[[0],[],[],[],[],[]],voice:'natural',personality:{planning:'together',romancePace:'slow'}};
+const visual={choices:[[0],[],[],[],[],[]],voice:'playful',personality:{firstMeeting:'observe',planning:'together',romancePace:'slow'}};
 const draft=(await call('/api/persona/photos',visual,owner)).data;
 const approved=(await call('/api/persona/approve',{draftId:draft.draftId,simulationApproved:true,examplesApproved:true,adultConfirmed:true},owner)).data;
 const ownSession=await fetch(base+'/api/session',{headers:{Cookie:owner}}).then(r=>r.json());assert(ownSession.personaIds.includes(approved.personaId));
@@ -18,6 +19,8 @@ const common={target:approved.personaId,locale:'en'};
 const first=await call('/api/companion',{...common,op:'get'},visitor+'; '+inviteCookie);assert.equal(first.data.state.messages.length,0);
 const visitorCookies=visitor+'; '+inviteCookie+'; '+first.cookie;
 let game=(await call('/api/companion',{...common,op:'start',revision:first.data.state.revision,turnId:randomUUID()},visitorCookies)).data.state;
+assert.match(game.messages[1].text,/get a feel for things/);
+assert.match(game.messages[1].text,/wonder where we will meet/);
 for(const choice of [0,0,1])game=(await call('/api/companion',{...common,op:'choose',choice,revision:game.revision,turnId:randomUUID()},visitorCookies)).data.state;
 assert.equal(game.plans.length,1);assert.equal(game.game,null);
 assert.match(game.messages[3].text,/each suggest an idea/);
@@ -26,4 +29,10 @@ const separate=await call('/api/companion',{...common,op:'get'},other+'; '+invit
 await call('/api/invite',{op:'revoke',id:invitation.id},owner);
 const stopped=await fetch(base+'/api/invite',{headers:{Cookie:inviteCookie}}).then(r=>r.json());assert.equal(stopped.target,null);
 const denied=await fetch(base+'/api/companion',{method:'POST',headers:{'Content-Type':'application/json',Origin:base,Cookie:visitor+'; '+inviteCookie+'; '+first.cookie},body:JSON.stringify({...common,op:'get'})});assert.notEqual(denied.status,200);
-console.log('PASS: invite creation, visitor isolation, revocation, and owner session listing');
+const oldVersion=(await call('/api/invite',{op:'create',personaId:approved.personaId},owner)).data;
+const oldCookie=(await fetch(oldVersion.url,{redirect:'manual'})).headers.getSetCookie()[0].split(';')[0];
+const revised=(await call('/api/persona/photos',{...visual,personality:{planning:'suggest'}},owner)).data;
+await call('/api/persona/approve',{personaId:approved.personaId,draftId:revised.draftId,simulationApproved:true,examplesApproved:true,adultConfirmed:true},owner);
+const outdated=await fetch(base+'/api/invite',{headers:{Cookie:oldCookie}}).then(r=>r.json());assert.equal(outdated.target,null);
+if(process.env.WRITE_TEST_INVITE){const fresh=(await call('/api/invite',{op:'create',personaId:approved.personaId},owner)).data;await writeFile(process.env.WRITE_TEST_INVITE,fresh.url,{mode:0o600});}
+console.log('PASS: invite creation, visitor isolation, revocation, persona update invalidation, and owner session listing');
