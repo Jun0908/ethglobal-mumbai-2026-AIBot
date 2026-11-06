@@ -120,6 +120,13 @@ export async function dispatchConversation(path: string, body: unknown, person: 
         const choice = rainStory[c.story.node].choices.find(choice => choice.id === input.choiceId);
         if (!choice || input.message || input.suggestionId) return fail(locale, 400, "今の場面の行動を選んでください。", "Choose an action for the current scene.");
         text = storyText(choice.label, locale); kind = "story_action"; story = chooseStory(c.story, choice.id);
+        if (c.story.node === "guessing") {
+          const correct = choice.id === "answer-cinnamon";
+          story.gameResult = {
+            ja: `香り当てで、あなたは${choice.label.ja}と答えた。正解はシナモン。${correct ? "あなたの正解！" : "今回はあなたの不正解。相手はヒントを出した。"}`,
+            en: `In the spice game, you guessed ${choice.label.en}. The answer was cinnamon. ${correct ? "You got it right!" : "Your guess was incorrect; your companion gave the clue."}`,
+          };
+        }
       } else {
         if (input.choiceId || Number(!!input.message) + Number(!!input.suggestionId) !== 1) return fail(locale, 400, "返答候補か入力した文章を送ってください。", "Send either a suggested reply or your own message.");
         const suggestion = c.suggestions.items.find(s => s.id === input.suggestionId);

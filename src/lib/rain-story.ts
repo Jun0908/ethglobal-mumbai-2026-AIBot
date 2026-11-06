@@ -3,8 +3,8 @@ import type { Locale } from "./i18n";
 export type Copy = { ja: string; en: string };
 const copy = (ja: string, en: string): Copy => ({ ja, en });
 export const storyText = (value: Copy, locale: Locale) => value[locale];
-export type StoryNode = "rain" | "cafe" | "market" | "listen" | "plan" | "ending";
-export type RainStory = { node: StoryNode; choices: string[]; revision: number };
+export type StoryNode = "rain" | "cafe" | "market" | "listen" | "plan" | "guessing" | "ending";
+export type RainStory = { node: StoryNode; choices: string[]; revision: number; gameResult?: Copy };
 export type StoryChoice = { id: string; label: Copy; hint: Copy; result: Copy; next: StoryNode };
 type StoryBeat = { title: Copy; description: Copy; choices: StoryChoice[] };
 
@@ -24,7 +24,16 @@ export const rainStory: Record<StoryNode, StoryBeat> = {
     choices: [
       { id: "blend", label: copy("好きな香りを一つずつ選ぶ", "Each choose a favorite spice"), hint: copy("違う好みを、一杯に混ぜる", "Bring two different tastes together"), result: copy("ふたりで選んだスパイスが、一杯のチャイになった。今日だけのブレンドだ。", "Your two chosen spices become a shared chai: a blend made just for today."), next: "plan" },
       { id: "quiet", label: copy("雨を眺めて、静かに過ごす", "Watch the rain together"), hint: copy("言葉を急がない時間", "Leave a little room for silence"), result: copy("しばらく言葉を休めた。雨音とカップの温かさが、この時間の思い出になった。", "You let the conversation rest. Rain on the window and warm cups become the memory of this moment."), next: "plan" },
-      { id: "guess", label: copy("香り当てゲームを提案する", "Suggest a spice guessing game"), hint: copy("外れても、笑えるかも", "A wrong guess can be part of the fun"), result: copy("目を閉じて香り当て。シナモンをジンジャーと間違えて、思わず笑ってしまった。", "Eyes closed, you try guessing the spices. You mistake cinnamon for ginger and laugh at the mix-up."), next: "plan" },
+      { id: "guess", label: copy("香り当てゲームを提案する", "Suggest a spice guessing game"), hint: copy("外れても、笑えるかも", "A wrong guess can be part of the fun"), result: copy("相手が香り当てを出題した。まだ回答していない。", "Your companion gives a spice clue. You have not answered yet."), next: "guessing" },
+    ],
+  },
+  guessing: {
+    title: copy("香り当て：あなたの番", "Spice guessing: your turn"),
+    description: copy("相手が瓶を差し出す。「甘くて、木のような温かい香り。お菓子にも使うよ」。どのスパイスだと思う？", "Your companion offers a jar. ‘Sweet, warm and woody. It is used in baking too.’ Which spice is it?"),
+    choices: [
+      { id: "answer-cinnamon", label: copy("シナモン", "Cinnamon"), hint: copy("甘く、木のような香り", "Sweet and woody"), result: copy("あなたはシナモンと答えた。", "You guessed cinnamon."), next: "plan" },
+      { id: "answer-ginger", label: copy("ジンジャー", "Ginger"), hint: copy("ぴりっとした刺激", "A sharp, warming kick"), result: copy("あなたはジンジャーと答えた。", "You guessed ginger."), next: "plan" },
+      { id: "answer-cardamom", label: copy("カルダモン", "Cardamom"), hint: copy("爽やかな香り", "A fresh aroma"), result: copy("あなたはカルダモンと答えた。", "You guessed cardamom."), next: "plan" },
     ],
   },
   market: {
@@ -61,7 +70,7 @@ export function newRainStory(revision = 0): RainStory { return { node: "rain", c
 export function chooseStory(story: RainStory, choiceId: string): RainStory {
   const choice = rainStory[story.node].choices.find(c => c.id === choiceId);
   if (!choice) throw new Error("Invalid story choice");
-  return { node: choice.next, choices: [...story.choices, choice.id], revision: story.revision + 1 };
+  return { node: choice.next, choices: [...story.choices, choice.id], revision: story.revision + 1, ...(story.gameResult ? { gameResult: story.gameResult } : {}) };
 }
 export function storyChoices(story: RainStory): StoryChoice[] {
   let node: StoryNode = "rain";
@@ -69,7 +78,7 @@ export function storyChoices(story: RainStory): StoryChoice[] {
     const choice = rainStory[node].choices.find(c => c.id === id);
     if (!choice) throw new Error("Invalid story history");
     node = choice.next;
-    return choice;
+    return story.gameResult && id.startsWith("answer-") ? { ...choice, result: story.gameResult } : choice;
   });
 }
 export function storyContext(story: RainStory, locale: Locale) {

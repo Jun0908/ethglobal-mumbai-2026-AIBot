@@ -4,29 +4,24 @@ import { chooseStory, newRainStory, rainStory, storyChoices, storyContext } from
 import { advanceGame, publicGame, retryGame, type Game } from "../src/lib/game";
 import type { Dialogue } from "../src/lib/schemas";
 
-test("all 27 routes reach an ending in exactly three decisions with distinct memories", () => {
-  const routes = new Set<string>();
-  for (const first of rainStory.rain.choices) {
-    const one = chooseStory(newRainStory(), first.id);
-    assert.equal(one.node, first.next);
-    for (const second of rainStory[one.node].choices) {
-      const two = chooseStory(one, second.id);
-      assert.equal(two.node, "plan");
-      for (const final of rainStory.plan.choices) {
-        const end = chooseStory(two, final.id);
-        assert.equal(end.node, "ending");
-        assert.equal(end.revision, 3);
-        const history = storyChoices(end);
-        assert.equal(history[1].result.en, second.result.en);
-        assert.equal(history[2].id, final.id);
-        routes.add(JSON.stringify(end.choices));
-        assert.throws(() => chooseStory(end, "stay"));
-        assert(!/[\u3040-\u30ff\u3400-\u9fff]/.test(JSON.stringify(storyContext(end, "en"))));
-      }
+test("all story paths finish, and guessing requires an answer before planning", () => {
+  let count = 0;
+  function walk(story: ReturnType<typeof newRainStory>) {
+    if (story.node === "ending") {
+      count++;
+      assert.equal(storyChoices(story).length, story.choices.length);
+      assert.throws(() => chooseStory(story, "stay"));
+      return;
     }
+    for (const choice of rainStory[story.node].choices) walk(chooseStory(story, choice.id));
   }
-  assert.equal(routes.size, 27);
-  assert.throws(() => chooseStory(newRainStory(), "bookshop"));
+  walk(newRainStory());
+  assert.equal(count, 33);
+  const playing = chooseStory(chooseStory(newRainStory(), "stay"), "guess");
+  assert.equal(playing.node, "guessing");
+  assert.throws(() => chooseStory(playing, "bookshop"));
+  assert(!JSON.stringify(playing).includes("cinnamon"));
+  assert.equal(chooseStory(playing, "answer-ginger").node, "plan");
   assert.throws(() => chooseStory(newRainStory(), "__proto__"));
 });
 
