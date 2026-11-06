@@ -13,7 +13,7 @@ const sessionSchema = z.object({
 export type StoredIdentity = z.infer<typeof sessionSchema>;
 const directory = () => resolve(/* turbopackIgnore: true */ process.env.PERSONA_DATA_DIR || ".data/personas", "..", "identities");
 const filename = (token: string) => join(directory(), `${createHash("sha256").update(token).digest("hex")}.json`);
-function identityKey() {
+export function identityKey() {
   const supplied = process.env.PERSONA_ENCRYPTION_KEY?.trim();
   if (supplied) {
     if (!/^[a-f\d]{64}$/i.test(supplied)) throw new Error("Encryption key must be 32 bytes in hex");

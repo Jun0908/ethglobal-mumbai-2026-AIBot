@@ -2,6 +2,14 @@ export type Locale = "ja" | "en";
 export function readLocale(value: string | null | undefined): Locale { return value === "en" ? "en" : "ja"; }
 
 export const english: Record<string, string> = {
+  "招待された分身と話す →": "Meet the invited twin →",
+  "友達に分身を試してもらう": "Invite a friend to meet your twin",
+  "リンクは7日間有効です。友達の会話はあなたに公開されません。分身を更新すると古いリンクは無効になります。": "Links last seven days. Your friend's chats stay private. Updating your twin invalidates old links.",
+  "招待リンクを作る": "Create invite link",
+  "招待リンク": "Invite link",
+  "リンクをコピー": "Copy link",
+  "招待": "Invite",
+  "停止": "Stop",
   "写真好きのMiraと、話して遊んで思い出を作ろう。": "Talk, play and make memories with photography-loving Mira.",
   "古書店で出会うAshaと、小さな朗読会を作る３話の物語。": "Meet Asha in a bookshop and create a little reading night in three chapters.",
   "誰と過ごそう？": "Who would you like to meet?",

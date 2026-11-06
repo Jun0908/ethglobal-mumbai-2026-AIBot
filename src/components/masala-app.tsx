@@ -74,6 +74,9 @@ export default function MasalaApp() {
     const [finalConsent, setFinalConsent] = useState(false);
     const [personaId, setPersonaId] = useState("");
     const [personaIds, setPersonaIds] = useState<string[]>([]);
+    const [inviteTarget,setInviteTarget]=useState<string|null>(null);
+    const [inviteLink,setInviteLink]=useState("");
+    const [activeInvites,setActiveInvites]=useState<{id:string;expiresAt:number}[]>([]);
     const [conversationTarget, setConversationTarget] = useState<ConversationTarget | null>(null);
     const [dateResult, setDateResult] = useState("");
     const [matchId, setMatchId] = useState("");
@@ -99,6 +102,11 @@ export default function MasalaApp() {
         setPersonaIds(data.personaIds);
         setPersonaId(data.personaIds[0] || "");
     } }).catch(() => { }); }, []);
+    useEffect(()=>{fetch('/api/invite').then(r=>r.json()).then((data:{target:string|null})=>setInviteTarget(data.target)).catch(()=>{});},[]);
+    useEffect(()=>{if(!personaId||!ready)return;void postRequest<{invitations:{id:string;expiresAt:number}[]}>('invite',{op:'list',personaId},locale).then(data=>setActiveInvites(data.invitations)).catch(()=>setActiveInvites([]));},[personaId,ready,locale]);
+    function makeInvite(){if(!personaId)return;void run(async()=>{const data=await post<{id:string;url:string;expiresAt:number}>('invite',{op:'create',personaId});setInviteLink(data.url);setActiveInvites(current=>[{id:data.id,expiresAt:data.expiresAt},...current]);});}
+    function stopInvite(id:string){void run(async()=>{await post('invite',{op:'revoke',id});setActiveInvites(current=>current.filter(v=>v.id!==id));setInviteLink('');});}
+    function openInvite(){if(!inviteTarget)return;void run(async()=>{await session();setConversationTarget({id:inviteTarget,matchId:''});setView('game');});}
     useEffect(() => { if (privacy)
         dialogRef.current?.showModal();
     else
@@ -248,7 +256,7 @@ export default function MasalaApp() {
             <p className="hero-jp">{t("あなたらしさから、はじまる会話。")}</p>
             <p className="hero-description">{t("自分らしく話して、また話したい相手を見つけよう。共通点も違いも、実際の会話から振り返れます。")}</p><p className="small">{t("相手を選ぶだけで始められます。自分のAIの作成は任意です。")}</p>
             <label className="check adult-check"><input type="checkbox" checked={adult} onChange={e => setAdult(e.target.checked)}/>{t("私は18歳以上で、AIとのシミュレーションであることを理解しています。")}</label>
-            <div className="hero-actions l--cluster -g:15"><button className="button primary" disabled={busy || !adult || !config || !config.demoMode} onClick={openCompanions}>{t("相手を選ぶ・会話を再開")}<span>↗</span></button><button className="button text-button" disabled={busy || !adult || !config} onClick={startInterview}>{t("自分のAIをつくる")}<span>→</span></button></div>
+            <div className="hero-actions l--cluster -g:15">{inviteTarget&&<button className="button primary" disabled={busy||!adult} onClick={openInvite}>{locale==='ja'?'招待された分身と話す →':'Meet the invited twin →'}</button>}<button className="button primary" disabled={busy || !adult || !config || !config.demoMode} onClick={openCompanions}>{t("相手を選ぶ・会話を再開")}<span>↗</span></button><button className="button text-button" disabled={busy || !adult || !config} onClick={startInterview}>{t("自分のAIをつくる")}<span>→</span></button></div>
             <p className="trust-note"><span>♧</span>{t("本人の承認から生まれるAI。秘密は、あなたのもの。")}</p>
           </div>
           <div className="hero-art"><img src={characterArt("Asha").src} style={{ objectPosition: characterArt("Asha").position }} alt={t("ムンバイのカフェでチャイを手にする成人のオリジナルアニメキャラクター")}/><span className="art-corner">THE FIRST CHAI DATE</span><div className="art-caption"><span className="sun-mark">✺</span><div><p>Some connections<br />start with a conversation.</p><span>{t("ひとつの会話が、きっかけになる。")}</span></div></div><span className="art-stamp">LET IT<br /><b>brew.</b><span>♡</span></span></div>
@@ -257,6 +265,7 @@ export default function MasalaApp() {
         <section className="meet-section"><div className="section-heading"><div><p className="eyebrow">TWO PERSONALITIES. YOUR CONVERSATION.</p><h2>{t("まずは、会ってみよう。")}</h2></div><p className="muted small">{config?.demoMode ? t("架空の成人Persona・実際の相手ではありません") : t("認証済みのマッチから開始してください")}<br />{provider}</p></div>
           {config?.demoMode ? <div className="persona-cards">{[{ id: "demo-calm", name: "Asha", label: "THE THOUGHTFUL ONE", desc: t("古書店で出会うAshaと、小さな朗読会を作る３話の物語。"), tags: [t("穏やか"), t("思慮深い"), t("ゆっくり")] }, { id: "demo-playful", name: "Mira", label: "THE SPONTANEOUS ONE", desc: t("写真好きのMiraと出会う３話の物語。会話を重ねて、合うところも違うところも見つけよう。"), tags: [t("遊び心"), t("好奇心"), t("自然体")] }].map((p, i) => <article className={`persona-card persona-${i}`} key={p.id}><div className="portrait-small"><img src={characterArt(p.id).src} style={{ objectPosition: characterArt(p.id).position }} alt={t("架空の成人キャラクターのイラスト")}/></div><div><p className="eyebrow">{p.label}</p><h3>{p.name} <small>27 · DEMO</small></h3><p>{p.desc}</p><div className="tags">{p.tags.map(tag => <span key={tag}>{tag}</span>)}</div></div><button className="round-button" aria-label={p.id === "demo-playful" ? t("Miraとの物語を遊ぶ") : locale === "en" ? `Talk to ${p.name}` : `${p.name}と話す`} disabled={busy || !adult} onClick={() => startGame(p.id, p.name)}>↗</button></article>)}</div> : <div className="panel l--stack -g:15"><p>{t("PSI連携元で本人確認を済ませ、マッチ情報を入力してください。")}</p><label>Match ID<input value={matchId} onChange={e => setMatchId(e.target.value)}/></label><label>Agent Persona ID<input value={matchPersonaId} onChange={e => setMatchPersonaId(e.target.value)}/></label><button className="button primary" disabled={!adult || busy || !matchId || !matchPersonaId} onClick={() => startGame(matchPersonaId, "Match")}>{t("マッチしたAIと話す")}</button></div>}
           {personaId && <div className="owned-persona"><label>{t("あなたの承認済みPersona")}<select aria-label={t("承認済みPersonaを選ぶ")} value={personaId} onChange={e => setPersonaId(e.target.value)} disabled={busy}>{personaIds.map((id, i) => <option value={id} key={id}>Persona {personaIds.length - i}</option>)}</select></label>{config?.demoMode && <button className="link-button" disabled={busy} onClick={() => startGame(personaId, "Your AI")}>{t("自分のAIと話す →")}</button>}<button className="link-button danger" disabled={busy} onClick={revoke}>{t("利用同意を撤回")}</button></div>}
+          {personaId&&<div className="panel l--stack -g:15"><h3>{locale==='ja'?'友達に分身を試してもらう':'Invite a friend to meet your twin'}</h3><p className="small muted">{locale==='ja'?'リンクは7日間有効です。友達の会話はあなたに公開されません。分身を更新すると古いリンクは無効になります。':'Links last seven days. Your friend’s chats stay private. Updating your twin invalidates old links.'}</p><button className="button secondary" disabled={busy} onClick={makeInvite}>{locale==='ja'?'招待リンクを作る':'Create invite link'}</button>{inviteLink&&<div><input aria-label={locale==='ja'?'招待リンク':'Invite link'} readOnly value={inviteLink}/><button className="link-button" onClick={()=>void navigator.clipboard.writeText(inviteLink)}>{locale==='ja'?'リンクをコピー':'Copy link'}</button></div>}{activeInvites.map(v=><div key={v.id}><span className="small">{locale==='ja'?'招待リンク':'Invite'} · {new Date(v.expiresAt).toLocaleDateString(locale==='ja'?'ja-JP':'en-US')}</span> <button className="link-button danger" disabled={busy} onClick={()=>stopInvite(v.id)}>{locale==='ja'?'停止':'Stop'}</button></div>)}</div>}
           {dateResult && <p className="notice" role="status">{t(dateResult)}</p>}
         </section>
       </>}
@@ -295,7 +304,8 @@ export default function MasalaApp() {
       {view === "game" && conversationTarget?.id === "demo-calm" && <RomanceExperience key="asha" story="asha" locale={locale} onHome={()=>setView("home")}/>}
       {view === "game" && conversationTarget?.id === "demo-playful" && <RomanceExperience key="mira" locale={locale} onHome={()=>setView("home")}/>}
       {view === "game" && conversationTarget && personaIds.includes(conversationTarget.id) && <CompanionExperience key={conversationTarget.id} target={conversationTarget.id} matchId={conversationTarget.matchId} own onTune={()=>{setEditingPersonaId(conversationTarget.id);setView("photos");}} locale={locale} onHome={()=>setView("home")}/>}
-      {view === "game" && conversationTarget?.id !== "demo-playful" && conversationTarget?.id !== "demo-calm" && (!conversationTarget || !personaIds.includes(conversationTarget.id)) && <ConversationExperience onAsha={()=>setConversationTarget({id:"demo-calm",matchId:"demo-match"})} onMira={()=>setConversationTarget({id:"demo-playful",matchId:"demo-match"})} key={conversationTarget?.id || "companions"} locale={locale} demo={!!config?.demoMode} initialTarget={conversationTarget} onHome={()=>setView("home")} onBusyChange={setBusy}/>}
+      {view === "game" && conversationTarget?.id===inviteTarget&&!personaIds.includes(conversationTarget.id) && <CompanionExperience key={conversationTarget.id} target={conversationTarget.id} locale={locale} onHome={()=>setView('home')}/>}
+      {view === "game" && conversationTarget?.id !== "demo-playful" && conversationTarget?.id !== "demo-calm" && (!conversationTarget || !personaIds.includes(conversationTarget.id)) && conversationTarget?.id!==inviteTarget && <ConversationExperience onAsha={()=>setConversationTarget({id:"demo-calm",matchId:"demo-match"})} onMira={()=>setConversationTarget({id:"demo-playful",matchId:"demo-match"})} key={conversationTarget?.id || "companions"} locale={locale} demo={!!config?.demoMode} initialTarget={conversationTarget} onHome={()=>setView("home")} onBusyChange={setBusy}/>}
 
 
     </main>

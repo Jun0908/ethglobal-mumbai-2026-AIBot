@@ -9,7 +9,9 @@ import {isDemo,llmMode} from '@/lib/server/config';
 import {demoPersona} from '@/lib/server/demo';
 import {generate,languageInstruction,twinPersonalityInstruction} from '@/lib/server/llm';
 import {companionKey,readCompanion,saveCompanion} from '@/lib/server/companion-store';
+import {validateInvitation} from '@/lib/server/invitation-store';
 import {forgetExchange,explicitTopic,topicLabels,type Topic} from '@/lib/companion';
+import {dateReaction} from '@/lib/date-reactions';
 export const runtime='nodejs';
 const input=z.object({op:z.enum(['get','chat','start','choose','cancel','save','forget']),target:z.string().min(1).max(100),matchId:z.string().min(1).max(100).optional(),locale:z.enum(['ja','en']),revision:z.number().int().nonnegative().optional(),turnId:z.string().uuid().optional(),message:z.string().trim().min(1).max(1200).optional(),choice:z.number().int().min(0).max(3).optional(),topic:z.enum(['photos','food','places','music','games','daily']).optional(),userId:z.string().uuid().optional()}).strict();
 const resultSchema=z.object({dialogue:z.string().min(1).max(700),topic:z.enum(['photos','food','places','music','games','daily']).nullable(),userQuote:z.string().max(180),partnerQuote:z.string().max(180)});
@@ -18,10 +20,12 @@ export async function POST(request:NextRequest){try{
  const demo=['demo-playful','demo-calm'].includes(i.target);if(demo&&!isDemo())throw new ApiError(403,'Demo unavailable');
  const capsule=demo?null:await loadCapsule(i.target).catch(()=>{throw new ApiError(404,'Persona unavailable');});
  if(capsule&&!capsule.consent.simulationApproved)throw new ApiError(403,p('この分身は利用できません。','This twin is unavailable.'));
- if(capsule&&capsule.ownerId!==person.ownerId)await verifyMatch(person,i.matchId||'',i.target);
+ const invited=capsule?.ownerId!==person.ownerId&&!!request.cookies.get('masala_invite')?.value&&validateInvitation(request.cookies.get('masala_invite')!.value);
+ const inviteAllowed=!!(invited&&capsule&&invited.personaId===capsule.personaId&&invited.version===capsule.version);
+ if(capsule&&capsule.ownerId!==person.ownerId&&!inviteAllowed)await verifyMatch(person,i.matchId||'',i.target);
  const supplied=request.cookies.get('masala_companion')?.value;
  const browserToken=supplied&&/^[a-f0-9]{64}$/.test(supplied)?supplied:randomBytes(32).toString('hex');
- const key=companionKey(demo?browserToken:person.ownerId,i.target+'|'+(i.matchId||''),1);
+ const key=companionKey(demo||inviteAllowed?browserToken:person.ownerId,i.target+'|'+(i.matchId||''),1);
  return await locked('companion:'+key,async()=>{
  let s=await readCompanion(key);let fallback=false;const content=capsule?.content??demoPersona(i.target==='demo-calm'?'calm':'playful',i.locale);
  if(i.op!=='get'){
@@ -41,9 +45,9 @@ export async function POST(request:NextRequest){try{
  if(i.op==='cancel')s.game=null;
  if(i.op==='choose'){
  if(!s.game||i.choice===undefined)throw new ApiError(409,'No active choice');const g=s.game;const names=[p('カフェ','Café'),p('海辺','Beach'),p('街歩き','City walk'),p('家でゆっくり','At home')];
- if(g.step===0){g.places=[i.choice];const preferred=content.personality.values.join(' ');let partner=i.target==='demo-playful'||/写真|photo|街|city/i.test(preferred)?2:/海|beach|outdoor/i.test(preferred)?1:0;if(partner===i.choice)partner=(partner+1)%3;g.places.push(partner);g.messageIds.push(...append(names[i.choice],p(`いいね。次は${names[partner]}はどう？ その案で行くか、あなたの案に変えるか、一緒に決めよう。`,`Nice. How about ${names[partner]} next? We can keep that idea or choose yours.`),'places'));g.step=1;}
- else if(g.step===1){if(i.choice!==0)g.places[1]=i.choice-1;g.messageIds.push(...append(i.choice===0?p('その案で行こう','Let us try your idea'):names[i.choice-1],p('決まったね。ところが途中で雨！ 屋内に移る？ 雨上がりを待つ？ 今日は短めにする？','It is a plan. But now rain! Move indoors, wait it out, or make today shorter?'),'places'));g.step=2;}
- else{if(i.choice>2)throw new ApiError(400,'Invalid adjustment');const labels=[p('屋内に移る','Move indoors'),p('雨上がりを待つ','Wait for clear skies'),p('今日は短めにする','Make today shorter')];g.messageIds.push(...append(labels[i.choice],p('相談して決められたね。このプラン、二人の記録に残しておこう。','We worked it out together. Let us keep this plan in our memories.'),'games'));s.plans.push({id:randomUUID(),places:g.places,adjustment:i.choice,messageIds:g.messageIds});s.game=null;}
+ if(g.step===0){g.places=[i.choice];const preferred=content.personality.values.join(' ');let partner=i.target==='demo-playful'||/写真|photo|街|city/i.test(preferred)?2:/海|beach|outdoor/i.test(preferred)?1:0;if(partner===i.choice)partner=(partner+1)%3;g.places.push(partner);g.messageIds.push(...append(names[i.choice],dateReaction(capsule,'proposal',i.locale,names[partner]),'places'));g.step=1;}
+ else if(g.step===1){if(i.choice!==0)g.places[1]=i.choice-1;g.messageIds.push(...append(i.choice===0?p('その案で行こう','Let us try your idea'):names[i.choice-1],dateReaction(capsule,'rain',i.locale),'places'));g.step=2;}
+ else{if(i.choice>2)throw new ApiError(400,'Invalid adjustment');const labels=[p('屋内に移る','Move indoors'),p('雨上がりを待つ','Wait for clear skies'),p('今日は短めにする','Make today shorter')];g.messageIds.push(...append(labels[i.choice],dateReaction(capsule,'ending',i.locale,'',i.choice),'games'));s.plans.push({id:randomUUID(),places:g.places,adjustment:i.choice,messageIds:g.messageIds});s.game=null;}
  }
  if(i.op==='save'){if(!i.topic)throw new ApiError(400,'Missing topic');if(!s.evidence.some(e=>e.topic===i.topic))throw new ApiError(400,'No evidence');s.saved=s.saved.includes(i.topic)?s.saved.filter(t=>t!==i.topic):[...s.saved,i.topic];}
  if(i.op==='forget'){if(!i.userId)throw new ApiError(400,'Missing exchange');s=forgetExchange(s,i.userId);s.saved=s.saved.filter(t=>s.evidence.some(e=>e.topic===t));}
@@ -51,7 +55,7 @@ export async function POST(request:NextRequest){try{
  s.receipts=Object.fromEntries(Object.entries(s.receipts).slice(-128));
  }
  }
- if(capsule){const latest=await loadCapsule(capsule.personaId);if(!latest.consent.simulationApproved||latest.version!==capsule.version)throw new ApiError(403,'Persona changed');}
+ if(capsule){const latest=await loadCapsule(capsule.personaId);if(!latest.consent.simulationApproved||latest.version!==capsule.version)throw new ApiError(403,'Persona changed');if(inviteAllowed&&!validateInvitation(request.cookies.get('masala_invite')!.value))throw new ApiError(403,'Invite expired');}
  await saveCompanion(key,s);const {receipts,...publicState}=s;void receipts;void topicLabels;const response=NextResponse.json({state:publicState,fallback},{headers:{'Cache-Control':'no-store'}});response.cookies.set('masala_companion',browserToken,{httpOnly:true,sameSite:'strict',secure:requestOrigin(request).startsWith('https:'),path:'/',maxAge:30*86400});return response;
  });
  }catch(e){return NextResponse.json({error:e instanceof ApiError?e.message:'処理できませんでした。 / Please try again.'},{status:e instanceof ApiError?e.status:e instanceof z.ZodError?400:500});}}
