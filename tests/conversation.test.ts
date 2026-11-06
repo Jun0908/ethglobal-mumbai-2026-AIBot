@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { appendConversation, createConversation, publicConversation, type ConversationMessage } from "../src/lib/conversation";
+import { appendConversation, createConversation, publicConversation, switchSuggestionLanguage, type ConversationMessage } from "../src/lib/conversation";
 import { validateReflection, type ReflectionCandidate } from "../src/lib/reflection";
 import { chooseStory } from "../src/lib/rain-story";
 
@@ -16,6 +16,17 @@ test("conversation continues after the ending and keeps stable, typed evidence I
   assert.equal(c.suggestions.revision, 2);
   assert(!JSON.stringify(publicConversation(c)).includes("private-"));
   assert(!("receipts" in publicConversation(c)));
+});
+
+test("switching language back does not reuse stale suggestion IDs or translate history", () => {
+  const c = createConversation({ id: "test", ownerId: "private-owner", personaId: "private-persona", personaVersion: 1, matchId: "private-match", partnerRef: "private-partner", partnerName: "Match" }, "ja", Date.now() + 1000);
+  const ids = c.suggestions.items.map(s => s.id);
+  switchSuggestionLanguage(c, "en");
+  assert.equal(c.suggestions.locale, "en");
+  switchSuggestionLanguage(c, "ja");
+  assert(c.suggestions.items.every(s => !ids.includes(s.id)));
+  assert.equal(c.revision, 0);
+  assert(!JSON.stringify(publicConversation(c)).includes("private-"));
 });
 
 function message(id: string, role: "user" | "assistant", text: string, sequence: number, kind: ConversationMessage["kind"] = role === "user" ? "free_text" : "agent_reply"): ConversationMessage {
