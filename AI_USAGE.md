@@ -22,6 +22,8 @@ Implementation is in progress. Completed checks are recorded in the commits and 
 - `src/lib/`: Codex-assisted Persona schemas, structured LLM calls, scripted demo responses, server-side session and encryption utilities, game state machine.
 - `src/app/`: Next.js shell and Lism CSS setup.
 - `tests/core.test.ts`: encryption integrity, scene transitions, retry memory and public response checks.
+- `src/app/api/` and `src/lib/server/matching.ts`: owner-authorized APIs, consent revocation and matching integration contract.
+- `scripts/check-flow.mjs`: API flow checks using fictional adult inputs; actual scripted-mode flow passed.
 
 ## Direction artifacts
 
