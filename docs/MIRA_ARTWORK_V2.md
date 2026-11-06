@@ -1,6 +1,6 @@
 # Mira portrait, alternative v2
 
-Created using the built-in image generation tool. Saved as `public/mira-portrait-v2.png`. This is the user's requested illustrated likeness inspired by Deepika Padukone, using the existing Mira illustration as an art-style reference. Saved as an alternative; the app's active artwork reference has not been changed.
+Created using the built-in image generation tool. Saved as `public/mira-portrait-v2.png`. This is the user's requested illustrated likeness inspired by Deepika Padukone, using the existing Mira illustration as an art-style reference. Subsequently assigned to Asha at the user's request. Mira continues to use `public/mira-portrait.png`.
 
 Final prompt:
 

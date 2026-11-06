@@ -25,7 +25,7 @@ Implementation is in progress. Completed checks are recorded in the commits and 
 - `src/app/api/` and `src/lib/server/matching.ts`: owner-authorized APIs, consent revocation and matching integration contract.
 - `scripts/check-flow.mjs`: API flow checks using fictional adult inputs; actual scripted-mode flow passed.
 - `src/components/masala-app.tsx` and `src/app/globals.css`: Codex-assisted responsive interview, calibration and dating interface; browser checks used fictional adult inputs.
-- `public/chai-date.png`: generated with OpenAI image generation, depicting an original fictional adult Indian character aged 27 in a Mumbai cafe. Originally shared by both demo personas; now used for Asha. No actual person is depicted.
+- `public/chai-date.png`: generated with OpenAI image generation, depicting an original fictional adult Indian character aged 27 in a Mumbai cafe. Originally shared by both demo personas; retained as the original illustration. No actual person is depicted.
 - `scripts/check-live.mjs`, `scripts/check-security.mjs`, `scripts/check-artifacts.mjs`: live-provider, invalid-input/rate-limit and build-artifact checks.
 - `src/lib/i18n.ts`, language-aware APIs and UI, `tests/i18n.test.ts`, `scripts/check-languages.mjs`: Codex-assisted JP/EN translations, saved language preference, new-response language selection and preservation checks.
 
@@ -44,3 +44,5 @@ Initial documentation was checked with Git diff and whitespace checks. Implement
 Update this file alongside implementation to identify AI-assisted modules and assets, human architecture and product decisions, reviews, integration work, and checks actually performed. Do not describe planned human reviews as completed reviews.
 
 2026-11-06 validation: TypeScript and production build passed; nine unit tests, the scripted-demo API flow, negative API checks and secret-artifact checks passed. After the user updated the local credential, live OpenAI checks passed for Japanese and English interview/extraction/calibration/revision, session recall, three scenes, contrasting Personas and simulated requests. A representative injection probe was checked; no comprehensive safety guarantee is claimed. Browser checks covered JP/EN switching, English adaptive questions and Persona generation, preserved unsent text, persisted language preference and a 390px English layout. External PSI integration and actual date delivery have not been tested. No human code review or human UI acceptance is claimed.
+
+- `public/mira-portrait-v2.png`: Deepika Padukone-inspired illustrated variant, subsequently selected by the user for Asha. Mira retains the short-curly-haired portrait.
