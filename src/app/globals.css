@@ -145,7 +145,6 @@
   .history-answer { padding: 12px 16px; border-radius: 5px; background: #eef0e7; }
   .history-answer > span { color: var(--olive); font-size: 9px; }
   .history-answer p { font-size: 12px; margin-top: 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
-  .review-send { padding: 20px; border: 1px solid #bfc6ad; border-radius: 6px; background: #f4f5ec; }
   .typing { font-size: 12px; color: var(--olive); }
   .typing > span { margin-left: 10px; font-size: 8px; letter-spacing: 4px; animation: pulse 1.4s infinite; }
   .calibration-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; align-items: start; }
@@ -286,7 +285,6 @@
     .panel { padding: 20px; }
     .interviewer-message p { font-size: 14px; }
     .interview-controls { align-items: flex-start; flex-direction: column; }
-    .review-send { padding: 15px; }
     .traits > div { grid-template-columns: 110px 1fr; gap: 9px; }
     .game-grid { grid-template-columns: 1fr; gap: 18px; }
     .date-stage { height: 380px; }

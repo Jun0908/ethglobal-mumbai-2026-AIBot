@@ -2,6 +2,15 @@ export type Locale = "ja" | "en";
 export function readLocale(value: string | null | undefined): Locale { return value === "en" ? "en" : "ja"; }
 
 export const english: Record<string, string> = {
+  "回答（送信前に編集できます）": "Your answer (editable before sending)",
+  "回答を送信して次へ →": "Send answer and continue →",
+  "フィードバックを送信して修正 →": "Send feedback and revise →",
+  "回答を送信すると、これまでの回答とともにAIが処理します。氏名・連絡先・住所は含めないでください。生回答全文は保存しません。": "When you send an answer, the AI processes it with your previous answers. Leave out names, contact details and addresses. Raw answers are not saved permanently.",
+  "回答・フィードバックは入力欄で編集し、送信ボタンで送れます。送信した回答、Persona、会話例、フィードバックをAIが処理します。完成したPersonaの利用には最終承認が必要です。": "Edit answers and feedback in their fields, then use the send button. The AI processes submitted answers, Personas, examples and feedback. Using your finished Persona requires final approval.",
+  "送信した回答": "Submitted answers",
+  "回答": "Answer",
+  "· 送信済み": "· Sent",
+  "送信した回答からAIの下書きを作ります。次は返答を1つ試して、自分らしさを確認しましょう。": "Create an AI draft from your submitted answers. Next, try one reply to check whether it feels like you.",
   "回答を選んでください": "Choose an answer",
   "その他（自分の言葉で入力）": "Other (write your own)",
   "選んだだけでは送信されません。次の画面で編集・承認できます。": "Selecting an answer does not send it. You can edit and approve it on the next screen.",
