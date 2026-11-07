@@ -82,6 +82,7 @@ OpenAI接続へ切り替える際はサーバーを停止し、`Remove-Item Env:
 | MATCHING_API_URL / MATCHING_API_TOKEN | PSI側のAPI接続先とサービス認証 |
 | MATCHING_IDENTITY_SECRET | PSIから受け取る本人確認署名の共有鍵 |
 | PARENT_METADATA_TOKEN | 親サービスからのPersonaメタデータ照会に使う32文字以上のBearer秘密値（サーバー専用） |
+| MATCHING_FRONTEND_ORIGIN | 本人確認引継ぎを許す親Webの単一Origin。既定はSecret Tinderの本番URL |
 
 デモでは暗号鍵を`.data/demo-encryption-key`に自動生成する。`.env`と`.data`はGit除外対象。暗号化は保存時のみであり、推論時には承認済みPersonaをOpenAIが処理する。繰り返しの会話から会話傾向が推測される可能性もある。
 
