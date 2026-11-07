@@ -58,6 +58,8 @@ All secrets stay on the server. See [.env.example](.env.example).
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Shared Redis storage. Vercel’s `KV_REST_API_URL` and `KV_REST_API_TOKEN` names are also supported. |
 | `PERSONA_DATA_DIR` | Local persona directory; defaults to `.data/personas`. |
 | `MATCHING_API_URL`, `MATCHING_API_TOKEN`, `MATCHING_IDENTITY_SECRET` | External matching adapter and identity verification configuration. |
+| `PARENT_METADATA_TOKEN` | Server-only bearer token of at least 32 characters for parent-service persona metadata requests. |
+| `MATCHING_FRONTEND_ORIGIN` | Exact allowed parent frontend origin for verified identity handoff; defaults to the Secret Tinder production origin. |
 | `MASALA_PUBLIC_ORIGIN` | Optional exact HTTPS origin for reverse-proxy sharing. |
 
 Local demo mode stores encrypted persistent records under `.data` and generates a local encryption key when none is supplied. Some local transient state remains in memory. Demo owner sessions last up to 30 days and can survive server restarts; this is browser-session continuity, not a recoverable user account. Clearing cookies can remove access to owned records.

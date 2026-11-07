@@ -8,6 +8,8 @@ The trusted PSI server signs a short-lived assertion as `base64url(JSON).base64u
 
 After obtaining the assertion through the team's authenticated integration, the browser posts `{ adultConfirmed: true, assertion }` to `/api/session`. The app creates an HttpOnly, SameSite=Strict cookie and binds all operations to the verified subject. The local demo instead uses a browser-session capability; it is not identity verification for real users.
 
+For separate browser origins, the parent opens `/handoff` in a new window. This page is enabled only with `DEMO_MODE=false` and accepts messages solely from `MATCHING_FRONTEND_ORIGIN` (default `https://ethglobal-mumbai-2026.vercel.app`). It sends a `secret-tinder:ready` message to that opener. The parent checks both the sender origin and exact window before requesting the short-lived assertion, then sends `secret-tinder:assertion` to the AIBot origin. The user explicitly confirms adulthood before this page posts to its own `/api/session`. The assertion is never placed in a URL or browser storage. This protocol does not make the assertion single-use; short expiry and origin checks are the current controls.
+
 ## Match verification
 
 `GET {MATCHING_API_URL}/matches/{matchId}`
@@ -17,6 +19,10 @@ Headers: `Authorization: Bearer {MATCHING_API_TOKEN}`, `X-Player-Subject: {verif
 Response: `{ matchId, agentPersonaId, playerSubject, simulationConsent: true, expiresAt: unixSeconds }`.
 
 The service must check participation and current consent server-side. The game validates the subject, exact Persona/match IDs and expiry at start, every message, retry and date request. The client-supplied `simulationConsent` is never authoritative.
+
+## Persona metadata for the matching service
+
+`GET /api/personas/{personaId}/metadata` requires `Authorization: Bearer {PARENT_METADATA_TOKEN}`. Configure a distinct random token of at least 32 characters on the AIBot and matching servers. The endpoint returns only `{ personaId, ownerSubject, status: "approved" | "revoked", version }` with `Cache-Control: no-store`. It reads current server-held Persona state and never returns Persona content. Personas created without a verified matching identity are unavailable through this endpoint. Missing or invalid service credentials fail closed.
 
 ## Date requests
 
