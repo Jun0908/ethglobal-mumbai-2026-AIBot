@@ -1,6 +1,6 @@
 # Recording the Secret Tender demo
 
-Two browser-demo cuts: **90 seconds** and **30 seconds**, 1920×1080, English UI, English burned-in captions, no audio.
+Three browser-demo cuts: **180 seconds**, **90 seconds** and **30 seconds**, 1920×1080, English UI, English burned-in captions, no audio. The three-minute cut restores the intermediate selections and both typed questions, with more reading time for replies and memories.
 
 ## What the video shows
 
@@ -36,22 +36,26 @@ The script starts fresh owner/visitor contexts and interacts through the UI. It 
 
 ```powershell
 python scripts/demo-video/render.py --dir output/demo-video
+# Detailed three-minute cut, without rebuilding the two existing cuts:
+python scripts/demo-video/render.py --dir output/demo-video --version 180s
 ```
 
 The editor reads the measured source ranges in `capture.json`, speeds up selected source ranges, pads the original 1920×960 screen with a caption band, and produces H.264/yuv420p MP4 files with fast-start metadata. A shorter source shot holds its final frame rather than inventing action. Captions and edit timelines are saved alongside the outputs for inspection. Windows Segoe UI is the default font; set `DEMO_VIDEO_FONT` to another local font path if needed.
 
 Outputs:
 
+- `output/demo-video/Secret-Tender-Demo-180s.mp4`
 - `output/demo-video/Secret-Tender-Demo-90s.mp4`
 - `output/demo-video/Secret-Tender-Demo-30s.mp4`
 
-Verify both durations and dimensions with FFprobe, decode the full files, and inspect frames from each scene before sharing. MP4 binaries are local deliverables and are not pushed to Git or deployed with the website.
+Verify the durations and dimensions with FFprobe, decode the full files, and inspect frames from each scene before sharing. MP4 binaries are local deliverables and are not pushed to Git or deployed with the website.
 
 ## Verified delivery — 2026-11-07
 
 | Cut | Duration | Frames | Size |
 | --- | --- | --- | --- |
+| Detailed | 180.000 s | 5,400 | 15,981,776 bytes |
 | Main | 90.000 s | 2,700 | 9,223,363 bytes |
 | Short | 30.000 s | 900 | 4,898,434 bytes |
 
-Both files are 1920×1080, 30 fps, H.264/yuv420p, without audio. Full-file FFmpeg decoding completed without errors. Review frames were inspected across all 17 main-cut scenes and all 10 short-cut scenes; captions remain outside the captured UI. Capture used the public demo and actual OpenAI replies. The recorded invitation was stopped after capture. Human feedback on presentation pace remains separate from these technical checks.
+All three files are 1920×1080, 30 fps, H.264/yuv420p, without audio. Full-file FFmpeg decoding completed without errors. Review frames were inspected across all 21 detailed-cut scenes, all 17 main-cut scenes and all 10 short-cut scenes; captions remain outside the captured UI. The detailed cut uses the same authentic source recording, restores previously omitted interactions, and does not require new AI calls. Capture used the public demo and actual OpenAI replies. The recorded invitation was stopped after capture. Human feedback on presentation pace remains separate from these technical checks.

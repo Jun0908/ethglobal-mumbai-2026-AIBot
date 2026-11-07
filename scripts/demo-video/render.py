@@ -1,15 +1,41 @@
-"""Edit genuine Playwright footage into 90s and 30s captioned MP4s."""
+"""Edit genuine Playwright footage into 180s, 90s and 30s captioned MP4s."""
 import json, subprocess, os, argparse
 from pathlib import Path
 
 parser=argparse.ArgumentParser()
 parser.add_argument('--dir',default='output/demo-video')
+parser.add_argument('--version',nargs='+',choices=['180s','90s','30s'],default=['90s','30s'])
 args=parser.parse_args()
 root=Path(args.dir).resolve()
 meta=json.loads((root/'capture.json').read_text(encoding='utf-8'))
 clips={c['name']:c for c in meta['clips']}
+# This range is the original, uninterrupted selection of the remaining traits.
+clips['personality_detail']={'source':'owner','start':clips['personality']['end'],'end':clips['preview_setup']['start']}
 font=Path(os.environ.get('DEMO_VIDEO_FONT','C:/Windows/Fonts/segoeui.ttf')).as_posix().replace(':',r'\:')
 plans={
+ '180s':[
+  ('home',9,'A little time together, before you meet.'),
+  ('create',6,'Start with your own AI twin. No long biography needed.'),
+  ('photos',10,'Choose the places and moments you enjoy.'),
+  ('photo_montage',14,'Food, activities, travel and quiet time: pick what feels like you.'),
+  ('personality',10,'How do you meet someone? What are you like once you are close?'),
+  ('personality_detail',11,'Choose your pace, what matters to you, and how you handle differences.'),
+  ('preview_setup',8,'Ask your twin something you might ask on a first meeting.'),
+  ('preview_reply',10,'Read the response. Does it sound like you?'),
+  ('approve',8,'Only you approve your preferences and the example response.'),
+  ('invite',8,'Share an invitation to meet your approved twin.'),
+  ('meet_invited_twin',6,'A separate visitor opens the invitation and starts fresh.'),
+  ('chat_one_send',6,'Begin with a simple question about time together.'),
+  ('chat_one_reply',9,'The reply reflects the approved twin and the conversation.'),
+  ('chat_two_send',6,'Follow your curiosity. Ask about something you both mentioned.'),
+  ('chat_two_reply',9,'Explore a topic you might want to continue in person.'),
+  ('game_start',8,'Now try a little date-planning game together.'),
+  ('game_choices',10,'Choose a meeting place, then decide on the next stop together.'),
+  ('game_ending',8,'Rain changes the plan. Choose how you want to adapt.'),
+  ('dashboard',9,'Your conversations and shared memories come together on one page.'),
+  ('memories',8,'Revisit the plan you made and the topics you explored.'),
+  ('continue_in_person',7,'Save something to ask when you meet the person.'),
+ ],
  '90s':[
   ('home',7,'A little time together, before you meet.'),
   ('photos',9,'Create your AI twin with photos you love.'),
@@ -44,7 +70,8 @@ plans={
 (root/'edits').mkdir(exist_ok=True)
 (root/'captions').mkdir(exist_ok=True)
 for version,plan in plans.items():
- expected=90 if version=='90s' else 30
+ if version not in args.version: continue
+ expected=int(version[:-1])
  assert sum(p[1] for p in plan)==expected
  outdir=root/'edits'/version;outdir.mkdir(exist_ok=True)
  parts=[];timeline=[];cursor=0
