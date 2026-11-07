@@ -91,21 +91,21 @@
 
 実装・検証と残る制約：[招待された分身の体験](docs/INVITED_TWIN_FLOW.md)。友達への案内：[試遊手順](docs/FRIEND_PLAYTEST.md)。
 
-### N08 / Vercel常設公開の前提（調査済み・未実装）
+### N08 / Vercel常設公開（公開済み・GitHub自動連携は未完了）
 
-Vercelの接続先アカウントを確認したが、このGitHubリポジトリに対応する既存プロジェクトは見つからなかった。現状の `.data` ファイル保存とプロセス内の下書き・ゲーム・レート制限をそのままVercelへ配置しても、分身作成や会話の継続を保証できない。公開URLを発行する前に次を行う。
+当初はこのGitHubリポジトリに対応するVercelプロジェクトがなかったため新規作成した。ローカル `.data` とプロセス内の一時状態はVercelへ持ち込まず、共有Redisへ移した。以下は実装状況と残る検証を示す。
 
 **料金条件（2026-11-07、更新）：Vercelと保存先は無料枠を優先し、OpenAI APIの費用は許容する。** 実LLMを使うため、公開環境の `LLM_MODE=openai` とサーバー側の `OPENAI_API_KEY` を設定する。Vercel Hobbyや保存サービスの無料枠を超えると停止し得るため、デプロイ前にプランと上限を確認する。OpenAIの従量課金を無料とは表示しない。
 
-- [ ] N08-1：永続データベースを選び、暗号化した分身・所有者セッション・招待・会話・デート記録の保存先を移す。既存ローカルデータを移行するか、デモ用に新規作成するかを明記する。
-- [ ] N08-2：プロセス内の下書き・ゲーム・再送制御・レート制限を複数インスタンスで安全に扱えるようにする。所有者・訪問者の権限確認をすべての操作で維持する。
+- [x] N08-1：永続データベースを選び、暗号化した分身・所有者セッション・招待・会話・デート記録の保存先を移す。既存ローカルデータを移行するか、デモ用に新規作成するかを明記する。
+- [x] N08-2：プロセス内の下書き・ゲーム・再送制御・レート制限を複数インスタンスで安全に扱えるようにする。所有者・訪問者の権限確認をすべての操作で維持する。
 - [ ] N08-3：Vercelプロジェクトを対象のGitHubリポジトリに接続し、`OPENAI_API_KEY`、`PERSONA_ENCRYPTION_KEY`、`DEMO_MODE`とデータベース接続をサーバー側環境変数に設定する。秘密の値をGitやログに出さない。
 - [ ] N08-4：Previewで分身作成 → 承認 → 招待 → 別ブラウザで会話・デート → 振り返りを検証する。別のサーバー処理・再デプロイ後も同じ記録へ戻れること、招待停止と同意撤回が即時に効くことを確認する。
 - [ ] N08-5：検証済みのコミットをProductionへ反映し、公開URLでJP/EN・スマートフォン・実LLM・公開設定を確認する。Cloudflareの一時トンネルは再開しない。
 
 参考：[Vercel Blobの保存と更新](https://vercel.com/docs/vercel-blob)、[Vercelのストレージ選択](https://vercel.com/docs/storage)。会話・同意・招待の更新には同時実行の整合性が必要なため、保存先を単純なファイル置換で決めない。
 
-2026-11-07進捗：Vercel Hobbyの `jun0908s-projects/love-match-masala` を作成し、Next.js/Node.js 24.xとProduction/Previewのサーバー側変数を設定した。暗号化した記録・下書き・ゲーム・セッション・招待をUpstash Redisへ保存するコードをmainへPushし、ローカルテストとビルドを通した。Upstash無料DBの接続は利用規約への本人同意待ち。GitHub接続とVercel公開はまだ行っていない。詳細は [Vercel公開手順](docs/VERCEL_DEPLOYMENT.md)。
+2026-11-07進捗：Vercel Hobbyの `jun0908s-projects/love-match-masala` とUpstash Redisのfreeプランを接続し、[Production](https://love-match-masala.vercel.app) を公開した。`main`へ小分けにPushし、ローカルの36件のテスト・型チェック・ビルド、公開先で画面・画像・実LLM質問・セッション復帰・招待と別セッションのデート・停止・分身更新による旧招待無効化を確認。GitHubの自動デプロイ接続には、VercelアカウントでGitHub Login Connectionの追加が必要（現状はCLIによるデプロイ）。Previewの招待フロー通し検証、人の試遊は残る。詳細は [Vercel公開手順](docs/VERCEL_DEPLOYMENT.md)。
 
 ---
 
