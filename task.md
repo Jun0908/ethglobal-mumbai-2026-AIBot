@@ -105,6 +105,8 @@ Vercelの接続先アカウントを確認したが、このGitHubリポジト�
 
 参考：[Vercel Blobの保存と更新](https://vercel.com/docs/vercel-blob)、[Vercelのストレージ選択](https://vercel.com/docs/storage)。会話・同意・招待の更新には同時実行の整合性が必要なため、保存先を単純なファイル置換で決めない。
 
+2026-11-07進捗：Vercel Hobbyの `jun0908s-projects/love-match-masala` を作成し、Next.js/Node.js 24.xとProduction/Previewのサーバー側変数を設定した。暗号化した記録・下書き・ゲーム・セッション・招待をUpstash Redisへ保存するコードをmainへPushし、ローカルテストとビルドを通した。Upstash無料DBの接続は利用規約への本人同意待ち。GitHub接続とVercel公開はまだ行っていない。詳細は [Vercel公開手順](docs/VERCEL_DEPLOYMENT.md)。
+
 ---
 
 ## 過去の計画と実装履歴
