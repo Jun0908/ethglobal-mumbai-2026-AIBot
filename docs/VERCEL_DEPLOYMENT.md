@@ -18,4 +18,4 @@ GitHubの自動デプロイには、Vercelアカウント設定の「Authenticat
 
 Vercel用のRedisは新規データベースとして開始する。ローカル `.data` の個人データ・会話・セッションを自動移行しないので、公開先では分身を改めて作成する。会話・分身・招待・セッションはアプリ側でAES-256-GCM暗号化して保存し、暗号鍵を変更すると既存データは読めなくなる。Redisのfreeプランは容量・コマンド数に上限がある。OpenAI APIは別途従量課金。
 
-ローカル検証：36件のテスト、TypeScript、Next.js本番ビルド。Productionの認証不要HTTPS URLで画面・Asha/Miraの画像・設定API・セッション作成と再開・OpenAIの質問生成を確認した。実際のRedisを使って招待作成→別セッションでデート→招待停止→分身更新による旧招待無効化まで公開APIで確認済み。Previewは作成済みだがVercel Authenticationで保護されており、招待フローの通し検証はProductionで実施した。GitHub自動連携と公開後の人による試遊は残る。
+ローカル検証：36件のテスト、TypeScript、Next.js本番ビルド。Productionの認証不要HTTPS URLで画面・Asha/Miraの画像・設定API・セッション作成と再開・OpenAIの質問生成を確認した。実際のRedisを使って招待作成→別セッションでデート→招待停止→分身更新による旧招待無効化まで公開APIで確認済み。Productionへの再デプロイ後も既存セッションを再開できた。Previewは作成済みだがVercel Authenticationで保護されており、招待フローの通し検証はProductionで実施した。GitHub自動連携と公開後の人による試遊は残る。

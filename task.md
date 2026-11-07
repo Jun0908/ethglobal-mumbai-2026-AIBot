@@ -105,7 +105,7 @@
 
 参考：[Vercel Blobの保存と更新](https://vercel.com/docs/vercel-blob)、[Vercelのストレージ選択](https://vercel.com/docs/storage)。会話・同意・招待の更新には同時実行の整合性が必要なため、保存先を単純なファイル置換で決めない。
 
-2026-11-07進捗：Vercel Hobbyの `jun0908s-projects/love-match-masala` とUpstash Redisのfreeプランを接続し、[Production](https://love-match-masala.vercel.app) を公開した。`main`へ小分けにPushし、ローカルの36件のテスト・型チェック・ビルド、公開先で画面・画像・実LLM質問・セッション復帰・招待と別セッションのデート・停止・分身更新による旧招待無効化を確認。GitHubの自動デプロイ接続には、VercelアカウントでGitHub Login Connectionの追加が必要（現状はCLIによるデプロイ）。Previewの招待フロー通し検証、人の試遊は残る。詳細は [Vercel公開手順](docs/VERCEL_DEPLOYMENT.md)。
+2026-11-07進捗：Vercel Hobbyの `jun0908s-projects/love-match-masala` とUpstash Redisのfreeプランを接続し、[Production](https://love-match-masala.vercel.app) を公開した。`main`へ小分けにPushし、ローカルの36件のテスト・型チェック・ビルド、公開先で画面・画像・実LLM質問・セッション復帰・招待と別セッションのデート・停止・分身更新による旧招待無効化を確認。再デプロイ後も既存セッションを再開できた。GitHubの自動デプロイ接続には、VercelアカウントでGitHub Login Connectionの追加が必要（現状はCLIによるデプロイ）。Previewの招待フロー通し検証、人の試遊は残る。詳細は [Vercel公開手順](docs/VERCEL_DEPLOYMENT.md)。
 
 ---
 
