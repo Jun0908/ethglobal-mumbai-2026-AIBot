@@ -8,8 +8,8 @@ const namespace = () => `masala:${process.env.VERCEL_ENV || "development"}:`;
 export const sharedName = (name: string) => namespace() + name;
 
 export function sharedRedis(): Redis | null {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
   if (Boolean(url) !== Boolean(token)) throw new Error("Both Upstash Redis credentials are required");
   if (!url || !token) {
     if (process.env.VERCEL) throw new Error("Vercel requires Upstash Redis for persistent state");

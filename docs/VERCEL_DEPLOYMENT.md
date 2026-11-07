@@ -2,7 +2,7 @@
 
 `jun0908s-projects/love-match-masala` はVercel Hobbyで作成済み。GitHub `Jun0908/ethglobal-mumbai-2026-AIBot` の `main` を公開対象にする。Next.jsプリセットとNode.js 24.xを設定済み。Production/Previewには `DEMO_MODE=true`、`LLM_MODE=openai`、`OPENAI_MODEL`、`OPENAI_API_KEY`、`PERSONA_ENCRYPTION_KEY` を設定済み。秘密の値はGitに含めない。
 
-アプリはVercel上で `UPSTASH_REDIS_REST_URL` と `UPSTASH_REDIS_REST_TOKEN` が両方ないと保存処理を拒否する。Upstash for Redisの**free**プランを選び、自動アップグレードと有料Prod Packを無効にしてVercelプロジェクトへ接続する。Vercel CLIはUpstashの規約に本人が同意するまで `integration_terms_acceptance_required` で停止した。CLIが案内したWeb上の規約同意URLは404になることがある。その場合は本人がこのリポジトリでPowerShellを開き、以下を実行して表示される規約を確認・同意する（AIエージェントからの実行はCLIが拒否する）。
+アプリはVercel上で `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`、またはVercel連携が設定する `KV_REST_API_URL` / `KV_REST_API_TOKEN` がないと保存処理を拒否する。Upstash for Redisの**free**プランを選び、自動アップグレードと有料Prod Packを無効にしてVercelプロジェクトへ接続する。Vercel CLIはUpstashの規約に本人が同意するまで `integration_terms_acceptance_required` で停止した。CLIが案内したWeb上の規約同意URLは404になることがある。その場合は本人がこのリポジトリでPowerShellを開き、以下を実行して表示される規約を確認・同意する（AIエージェントからの実行はCLIが拒否する）。
 
 ```powershell
 npx --yes vercel integration accept-terms upstash --scope jun0908s-projects
