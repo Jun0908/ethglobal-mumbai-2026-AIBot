@@ -208,7 +208,7 @@
   .hero h1 { margin: 0 0 7px; font-size: clamp(68px, 7.6vw, 112px); line-height: .99; font-weight: 400; }
   .hero h1 em { font-weight: 400; }
   .hero-jp { font-size: 19px; letter-spacing: .08em; margin-top: 8px; }
-  .hero-description { font-size: 12px; color: var(--muted); line-height: 2; }
+  .hero-description { max-width: 38em; font-size: 14px; color: var(--muted); line-height: 1.9; text-wrap: pretty; }
   .check { display: flex; align-items: flex-start; gap: 10px; font-size: 12px; cursor: pointer; }
   .check input { accent-color: var(--olive); width: 16px; height: 16px; margin-top: 3px; flex-shrink: 0; }
   .adult-check { max-width: 385px; font-size: 10px; color: var(--muted); }

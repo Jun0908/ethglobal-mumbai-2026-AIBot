@@ -1,45 +1,74 @@
-# LOVE MATCH MASALA
+# Secret Tender
 
-Next.js / React / TypeScript / Lism CSSで実装する、Personaを本人が確認・校正できる自由会話型デートシミュレーション。
+**A little time together, before you meet.**
 
-インタビューの選択・直接送信、Personaの抽出・校正・変更承認・暗号化保存、相手ごとの再開可能な会話、雨の日の分岐ストーリー、会話の引用に基づく相性の振り返りと比較、同意撤回、架空のデート申請を実装済み。AshaとMiraには、それぞれ異なる架空の成人キャラクターのイラストを使用する。
+[日本語](README.ja.md) · [Try the demo](https://love-match-masala.vercel.app/)
 
-ヘッダーの **JP / EN** で日本語・英語を切り替える。画面・同意文・プライバシー説明・APIエラー・新しく生成するAIの質問と返答が対象。設定はブラウザーに保存される。入力済みの文章、過去の会話、既存のPersonaは書き換えない。
+Secret Tender lets you explore what spending time with someone might feel like through conversations and small date games with their AI twin. Discover a conversational rhythm, make a shared memory, and find something you would love to ask when you meet the person.
 
-## 遊び方
+The twin reflects preferences and communication tendencies its owner chooses and approves. The experience is a starting point for curiosity about the person; it does not predict their feelings or a real date’s outcome.
 
-- すぐ遊ぶ：18歳以上の確認 →「相手を選ぶ・会話を再開」。自分のAI作成は任意。
-- 「あなたの返事」の3候補を押すと発言する。「その他・自分で書く」では自由入力できる。候補は相手の返事の後に生成し、プレイヤーの視点と履歴の整合を検査する。反対意見や質問は毎回強制しない。不正時は短い汎用候補に切り替える。
-- 会話と行動は別操作。「次の展開」で雨の日の行き先・行動・次回提案を決める。物語が終わっても会話は続けられる。
-- 「相性を振り返る」で、ペース・過ごし方・距離の縮め方・違いへの対応を分析する。根拠の引用から元の発言を確認でき、違うと思った解釈を取り消せる。本人の心地よさ・また話したいかは任意で別に記録する。
-- 相手一覧でAsha / Miraそれぞれの最新のデートを比較する。未会話や根拠不足は未判定。得点・ランキング・恋愛成功確率は出さない。キャラクターは固定デモ相手で、自動推薦された相手ではない。
-- 相手ごとに続きから再開でき、新しいデートを始めても以前の会話を上書きしない。ページ更新後は相手一覧から再開できる。
-- 自分のAI作成：選択肢を押すだけで送信して次へ。「その他」だけ自由入力を開く。最大6問（スキップ含む）。前の質問へ戻って答え直せる。送信済みのデータ処理を取り消す機能ではなく、以後のPersona作成に使う回答を訂正する機能。
-- 1つ以上回答したら途中終了も可能。下書きの返答を試して評価し、必要なら修正し、最終承認して保存する。
+## What you can do
 
-## 言語とAIの役割
+- **Meet a companion.** Try distinct fictional adult characters: Asha’s bookshop and reading-night story, or Mira’s photography and chai-date story. Choices shape events, and conversation continues beyond the story.
+- **Create your AI twin with taps.** Choose from six photo themes with 24 images, then six illustrated personality and relationship topics. Skip questions, try a preview early, and adjust the voice without writing a long biography. Photo choices express preferences; they do not automatically diagnose personality.
+- **Try it before approving.** Talk with your draft twin, adjust it, and approve its simulation use. Owners can edit and reapprove their twins later.
+- **Invite a friend.** Share a seven-day link to an approved twin. Stop the link at any time; updating the twin invalidates older links. Visitors have separate records, and their full conversations are not automatically shown to the owner.
+- **Talk, play, and look back.** The twin conversation flow includes a three-choice date-planning game and a one-page dashboard with memories, discussed topics, and things to ask when you meet. Story experiences also show relationship progress and a visual compatibility reflection.
+- **Switch between Japanese and English.** JP/EN controls the interface and newly generated AI replies. Existing conversations and approved persona text keep their original language.
 
-JP/ENの選択を各リクエストの`X-Masala-Language`でLLMに指定する。入力文からの言語自動判定ではなく、選択した言語で新しい質問・候補・返答を生成する。以前の会話やPersonaは自動翻訳しない。
+## Try the experience
 
-インタビューの追加質問と回答候補はLLMが生成する。デートの行動候補・分岐・結末はコードで管理し、LLMはPersonaに沿う台詞と返答候補を生成する。相性の振り返りは閲覧可能な会話だけを別リクエストで分析する。サーバーは引用の存在・所属・役割・順序を確認するが、解釈の正しさを保証するものではない。実人物の感情や将来のデート承諾は判定しない。
+Open [the live demo](https://love-match-masala.vercel.app/), confirm that you are 18 or older, and choose **Try a date** or **Create your AI twin**. Creating a twin is optional for the fictional character stories.
 
-新UIは`POST /api/dialogue/*`を使用する。既存`game/*`は旧フローの互換用に維持する。振り返りは会話revision・言語ごとに再利用し、生成中も会話を続けられる。日本語・英語の切替時、過去の発言はそのまま保ち、返答候補と以後の生成言語を切り替える。
+Asha and Mira are fictional demo companions. Custom twins use owner-approved settings. The demo does not connect users to a real matching service or send real date requests.
 
-会話・振り返り・任意の感想はサーバーメモリで保持する。有効期限は最後の会話・再開から2時間、最大でログインの8時間まで。再起動後や期限後の復元には対応しない。1会話60往復（物語の行動を含む）、同時に20会話まで。60往復までは履歴全体を生成に渡し、途中の発言を黙って切り捨てない。定型デモモードは相性を分析せず、その旨を表示する。
+## Run locally
 
-## ローカル起動
+The deployed project uses Node.js 24.x. Install dependencies and create a local environment file:
 
 ```powershell
-npm.cmd install
-# .env.exampleを.envへコピーし、OPENAI_API_KEYを設定
+npm.cmd ci
+Copy-Item .env.example .env
+```
+
+For generated dialogue, set `OPENAI_API_KEY` in `.env` and choose `LLM_MODE=openai`. Then run:
+
+```powershell
 npm.cmd run dev
 ```
 
-`http://127.0.0.1:3000`を開く。キーはクライアントへ渡さない。`LLM_MODE=auto`ではキーがあるとOpenAI、ない場合は明示した定型デモを使う。APIエラー時に定型デモへ黙って切り替えることはしない。
+Open [http://127.0.0.1:3000](http://127.0.0.1:3000).
 
-`DEMO_MODE=true`はマッチング・申請を架空のものにする設定。AI推論の使用有無とは別。実API検証には架空の成人の入力だけを使用する。
+For a scripted experience without an API key, set `LLM_MODE=demo`. In `auto` mode, the app uses OpenAI when a key is present and otherwise uses the labelled scripted demo. OpenAI failures are displayed; they do not silently switch to scripted responses.
 
-## 確認コマンド
+`DEMO_MODE=true` selects fictional matching and requests. It is independent of `LLM_MODE`: the public demo uses OpenAI with fictional matches. OpenAI API usage is billed separately.
+
+## Configuration and storage
+
+All secrets stay on the server. See [.env.example](.env.example).
+
+| Variable | Purpose |
+| --- | --- |
+| `OPENAI_API_KEY` | Server-side OpenAI API key. |
+| `OPENAI_MODEL` | Model; defaults to `gpt-4.1-mini`. |
+| `LLM_MODE` | `auto`, `openai`, or `demo`. |
+| `DEMO_MODE` | Defaults to `true`; `false` requires the external matching and identity integration. |
+| `PERSONA_ENCRYPTION_KEY` | Stable 32-byte key encoded as 64 hex characters. Required on Vercel, with Redis, and outside local demo mode. |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Shared Redis storage. Vercel’s `KV_REST_API_URL` and `KV_REST_API_TOKEN` names are also supported. |
+| `PERSONA_DATA_DIR` | Local persona directory; defaults to `.data/personas`. |
+| `MATCHING_API_URL`, `MATCHING_API_TOKEN`, `MATCHING_IDENTITY_SECRET` | External matching adapter and identity verification configuration. |
+| `PARENT_METADATA_TOKEN` | Server-only bearer token of at least 32 characters for parent-service persona metadata requests. |
+| `MATCHING_FRONTEND_ORIGIN` | Exact allowed parent frontend origin for verified identity handoff; defaults to the Secret Tinder production origin. |
+| `MASALA_PUBLIC_ORIGIN` | Optional exact HTTPS origin for reverse-proxy sharing. |
+
+Local demo mode stores encrypted persistent records under `.data` and generates a local encryption key when none is supplied. Some local transient state remains in memory. Demo owner sessions last up to 30 days and can survive server restarts; this is browser-session continuity, not a recoverable user account. Clearing cookies can remove access to owned records.
+
+On Vercel, Redis is required for shared state, sessions, rate limits, and locks. Private records are encrypted with AES-256-GCM; Production and Preview use separate namespaces. Keep the encryption key stable: replacing it makes existing encrypted data unreadable. Local records are not automatically uploaded or migrated.
+
+Approved persona content and submitted conversation are processed by OpenAI when enabled. Encryption at rest does not hide inference inputs from the provider. The app includes ownership checks, revocation, and evidence validation; human evaluation of conversation quality and further production authentication work remain necessary.
+
+## Checks
 
 ```powershell
 npm.cmd run typecheck
@@ -47,83 +76,28 @@ npm.cmd test
 npm.cmd run build
 ```
 
-APIフロー検証は別ターミナルで`$env:LLM_MODE='demo'; $env:PORT='3001'; npm.cmd run dev`を起動し、`npm.cmd run test:flow`を実行する。
+The current unit suite has 36 tests. Integration scripts require a running test server. For example, `node scripts/check-invite.mjs` checks invitation creation, separate visitor records, revocation, and invalidation after a twin update. Use `TEST_BASE_URL` to select the test server. Scripts that exercise AI features can call OpenAI and incur charges when the server uses it.
 
-本番ビルドでデモを起動する場合：
+After a build, `node --env-file=.env scripts/check-artifacts.mjs` checks client artifacts for the configured API key without printing its value.
 
-```powershell
-npm.cmd run build
-$env:LLM_MODE='demo'
-npm.cmd start
-```
+## Deployment
 
-OpenAI接続へ切り替える際はサーバーを停止し、`Remove-Item Env:LLM_MODE -ErrorAction SilentlyContinue`でデモ用上書きを解除して、修正済みの.envを使って起動する。現在のプレビューはOpenAI接続・架空のマッチングで起動している。
+The live app runs on Vercel Hobby with an Upstash Redis Free database. Both have free-tier limits; OpenAI usage is separate. Local secrets and runtime data are excluded by `.gitignore` and `.vercelignore`.
 
-`npm.cmd run test:security`は稼働中の3000番ポートに対して、不正JSON・送信元・入力サイズ・未認証・回数制限を検証する。`TEST_BASE_URL`で接続先を変えられる。
+See [deployment status and instructions](docs/VERCEL_DEPLOYMENT.md). The site has been deployed through the CLI. GitHub automatic deployment still needs the Vercel account’s GitHub Login Connection; pushing to `main` alone is not currently a deployment.
 
-`npm.cmd run test:live`は実際のOpenAI APIを呼ぶ検証。架空の成人の入力だけを使用し、LLM_MODE=auto/openai・DEMO_MODE=trueのサーバーで実行する。API利用料が発生する。
+## Architecture and implementation notes
 
-`npm.cmd run test:languages`は英語の一連フローと会話中のJA/EN切り替えを検証する。OpenAI接続時は実APIを呼ぶ。APIの表示言語は`X-Masala-Language: ja | en`で指定でき、省略・未対応値は日本語になる。認証情報や所有権とは独立した表示設定。
+Next.js App Router · React · TypeScript · Lism CSS · OpenAI Responses API · Zod · Upstash Redis.
 
-`node scripts/check-interview.mjs`はJP/ENの3つの選択肢と、回答・スキップ・混在・上限超過の終了を検証する。既定の接続先は3000番ポート。OpenAI接続時は実APIを2回呼ぶ。
+Story branches and game state are controlled by code; the model generates persona-aware dialogue. Dashboard topics and reflections reference actual messages, and insufficient evidence stays unknown. A story’s relationship display describes the simulation, not a real person’s attraction.
 
-ビルド後、`node --env-file=.env scripts/check-artifacts.mjs`でクライアント出力へのキー混入と秘密ファイルの配布対象入りを検査できる。値は出力しない。
+- [Task list and implementation history](task.md)
+- [Playwright demo video recording and editing](docs/DEMO_VIDEO.md)
+- [Illustrated personality choices](docs/ILLUSTRATED_PERSONALITY.md)
+- [Invited twin flow](docs/INVITED_TWIN_FLOW.md)
+- [Friend playtest guide](docs/FRIEND_PLAYTEST.md)
+- [External matching adapter](docs/MATCHING_ADAPTER.md)
+- [AI usage](AI_USAGE.md)
 
-## 環境変数
-
-| 変数 | 用途 |
-|---|---|
-| OPENAI_API_KEY | OpenAI APIキー（サーバー専用） |
-| OPENAI_MODEL | 使用モデル。既定値gpt-4.1-mini |
-| LLM_MODE | auto / openai / demo |
-| DEMO_MODE | trueなら架空のマッチ・申請。既定true |
-| PERSONA_ENCRYPTION_KEY | 実運用時必須。32バイトを64桁の16進数で設定 |
-| PERSONA_DATA_DIR | 暗号化Personaの保存先。既定.data/personas |
-| MATCHING_API_URL / MATCHING_API_TOKEN | PSI側のAPI接続先とサービス認証 |
-| MATCHING_IDENTITY_SECRET | PSIから受け取る本人確認署名の共有鍵 |
-| PARENT_METADATA_TOKEN | 親サービスからのPersonaメタデータ照会に使う32文字以上のBearer秘密値（サーバー専用） |
-| MATCHING_FRONTEND_ORIGIN | 本人確認引継ぎを許す親Webの単一Origin。既定はSecret Tinderの本番URL |
-
-デモでは暗号鍵を`.data/demo-encryption-key`に自動生成する。`.env`と`.data`はGit除外対象。暗号化は保存時のみであり、推論時には承認済みPersonaをOpenAIが処理する。繰り返しの会話から会話傾向が推測される可能性もある。
-
-実マッチング接続は[Adapter仕様](docs/MATCHING_ADAPTER.md)を参照。単一Nodeプロセス・永続ディスク向けのMVPであり、外部認証や共有データストアの接続は別途必要。
-
-## 検証結果・残作業
-
-2026-11-06時点：
-
-- 型チェック、本番ビルド：成功。
-- 単体テスト12件：成功（暗号化・改ざん検出、状態遷移、Retry、公開DTO、出力検証、翻訳の網羅性、言語指定、デモ応答、承認済み入力の保持）。
-- 本番起動でのAPI一連フロー：成功（定型デモ）。本人の修正、2名の応答差、セッション記憶、3シーン、申請の重複防止、所有権、同意撤回を確認。
-- 不正JSON、異なるOrigin、未成年設定、過大入力、未認証、利用回数制限：拒否を確認。
-- ブラウザー：回答送信から校正・最終承認・会話まで確認。本番ビルドで3シーン9ターンとデモ申請の完了を確認。JP/EN表示、英語の実API追加質問・Persona生成、未送信入力の保持、言語設定の再読み込み後の保持を確認。390px幅の英語ホーム・プライバシー説明で横はみ出しなし。
-- 配布用ファイル一覧に.env/.dataなし。クライアント出力に設定されたAPIキーの値なし。
-- 更新済みキーでOpenAIの構造化応答に成功。test:liveで日本語のインタビュー・校正・修正反映・記憶・3シーン・応答差・代表的なPrompt Injection入力・デモ申請を確認。test:languagesで英語の生成・校正・3シーン・申請と、途中のJA/EN切り替え、既存会話の保持を確認。限られた架空の入力での検証であり、会話品質や耐性の包括的評価ではない。
-- 友人のPSI APIと本番認証の接続、実際の相手へのデート申請、外部公開は未実施。
-
-出力検査と個人情報フィルターは簡易的な検出であり、全ての漏洩やPrompt Injectionを防ぐ保証はない。実ユーザーへの提供には、データ保持・削除、継続的な同意管理、本番認証とセキュリティの追加検証が必要。現在は架空の成人Personaでデモする。
-
-- 2026-11-06追加検証：6問終了・3択＋その他・デート返答候補と目的表示を実装。JP/ENの選択肢生成を実OpenAIで確認。ブラウザーで選択回答・その他入力・混在6問終了・全問スキップ・下書き遷移・返答候補の送信前編集を確認。
-
-- 回答・修正フィードバックの毎回の確認画面とチェックを撤去。送信ボタンの操作で送信し、送信先の説明、送信前の編集、完成したPersonaの最終承認は維持する。
-
-## 分岐ゲームの検証
-
-`node scripts/check-rain.mjs`で雨の日のフローを検証する。既定の接続先は3000番ポート。OpenAI接続時は実APIを呼ぶ。架空の成人Personaだけを使用する。
-
-- 全33経路を単体テストで確認。物語は3段階で、香り当てを選ぶと出題への回答操作が追加され、回答後に正誤が確定する。
-- 実OpenAIで2名のPersona、JA→EN→JAの返答切替、任意チャット、結末、デモ申請、再挑戦を確認。
-- 所有権、利用同意、場面に存在しない行動、古いrevisionによる再送を検証。LLM失敗時は状態を進めない。
-- ブラウザーでワンクリック回答、回答の訂正、その他入力、6問終了、カフェの結末、市場への分岐、任意チャットを確認。
-
-互換性のため、`game/start`の`mode`省略時は以前の3シーン自由会話API、`mode: "rain"`は以前の分岐APIを維持する。現在のUIは`dialogue/*`で起動する。過去の3シーン検証記録と`test:flow`は互換APIの検証。
-
-## 会話・相性機能の検証
-
-- `npm test`：16件成功。物語終了後の会話、履歴・引用ID、言語切替後の古い候補、偽引用・他会話・片方のみの証拠、歩み寄りの時間順序を含む。
-- `node scripts/check-conversations.mjs`：既定3001番の定型デモサーバーを使用。再開、新規デート、更新後の取得、終了後の会話、二重送信、古いrevision、所有権、同意撤回、感想、申請の維持を検証。
-- `TEST_BASE_URL=http://127.0.0.1:3000`と`TEST_LIVE=1`を環境変数として設定して同じスクリプトを実行すると、実OpenAIで2名の返答、JP/EN、候補、引用付き振り返りを検証する。API利用が発生する。
-- 型チェック・本番ビルド・既存APIフロー・クライアント成果物へのキー混入チェック：成功。
-- ブラウザーで選択式・自由入力・言語切替・相手別再開・ページ更新後の復元・本人の感想、実OpenAIの日本語の引用付き振り返り、引用への移動、解釈の取消・復元を確認。390px幅のJP/ENで横はみ出しなし。
-
-会話品質の修正・実LLM再検証: [検証記録](docs/CONVERSATION_FIX_VERIFICATION.md)。`node scripts/check-conversation-quality.mjs` で両者・JP/ENの40往復を再検証できる（OpenAI利用料が発生）。
+Some implementation notes are historical snapshots. The repository, package name, and internal API identifiers retain the original LOVE MATCH MASALA naming for compatibility.
