@@ -5,7 +5,7 @@ import { z } from "zod";
 import { answerSchema, approvedAnswersSchema, idSchema, scenarios } from "@/lib/schemas";
 import { advanceGame, publicGame, retryGame, type Game } from "@/lib/game";
 import { isDemo, llmMode } from "@/lib/server/config";
-import { createDraft, loadCapsule, saveCapsule, state, type Capsule, type Identity } from "@/lib/server/store";
+import { createDraft, deleteDateRequest, deleteDraft, deleteOwnerDrafts, loadCapsule, loadDateRequest, loadDraft, loadGame, saveCapsule, saveDateRequest, saveDraft, saveGame, type Capsule, type Identity } from "@/lib/server/store";
 import { ApiError, checkOrigin, createIdentity, ensureNoPrivateText, identity, locked, persistIdentity, readBody, setIdentityCookie } from "@/lib/server/security";
 import { agentReply, extractPersona, nextQuestion, revisePersona } from "@/lib/server/llm";
 import { demoPersona } from "@/lib/server/demo";
@@ -18,8 +18,8 @@ import { dispatchConversation } from "@/lib/server/conversation-service";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const json = (data: unknown, status = 200) => NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } });
-function draftFor(id: string, ownerId: string) {
-  const draft = state.drafts.get(id);
+async function draftFor(id: string, ownerId: string) {
+  const draft = await loadDraft(id);
   if (!draft || draft.ownerId !== ownerId || draft.expiresAt < Date.now()) throw new ApiError(404, "下書きが見つかりません。インタビューからやり直してください。");
   return draft;
 }
@@ -34,8 +34,8 @@ async function authorizeGame(game: Game, person: Identity) {
   await verifyMatch(person, game.matchId, game.personaId);
   return capsule;
 }
-function ownedGame(id: string, ownerId: string) {
-  const game = state.games.get(id);
+async function ownedGame(id: string, ownerId: string) {
+  const game = await loadGame(id);
   if (!game || game.ownerId !== ownerId || game.expiresAt < Date.now()) throw new ApiError(404, "ゲームが見つかりません。");
   return game;
 }
@@ -56,40 +56,42 @@ async function dispatch(path: string, body: unknown, person: Identity, locale: L
     }
     case "persona/photos": {
       const input=photoSettingsSchema.parse(body);
-      const draft=createDraft(person.ownerId,photoPersona(input.choices,input.voice,locale,input.personality));
+      const draft=await createDraft(person.ownerId,photoPersona(input.choices,input.voice,locale,input.personality));
       draft.visual=input;
+      await saveDraft(draft);
       return {draftId:draft.id,content:draft.content};
     }
     case "persona/preview": {
       const input=z.object({draftId:idSchema,message:z.string().trim().min(1).max(1200)}).strict().parse(body);
-      const draft=draftFor(input.draftId,person.ownerId);
+      const draft=await draftFor(input.draftId,person.ownerId);
       const reply=await agentReply(draft.content,input.message,0,[],locale);
       draft.content.behaviorExamples=[...draft.content.behaviorExamples.slice(0,7),{situation:input.message.slice(0,300),response:reply.dialogue.slice(0,500),tendency:locale==='ja'?'本人が確認するプレビュー':'Preview for owner approval'}];
+      await saveDraft(draft);
       return reply;
     }
     case "persona/extract": {
       const input = approvedAnswersSchema.parse(body);
       ensureNoPrivateText(input.answers);
       const content = await extractPersona(input.answers, locale);
-      const draft = createDraft(person.ownerId, content);
+      const draft = await createDraft(person.ownerId, content);
       return { draftId: draft.id, content: draft.content };
     }
     case "persona/calibrate": {
       const input = z.object({ draftId: idSchema, scenario: z.number().int().min(0).max(2) }).strict().parse(body);
-      const draft = draftFor(input.draftId, person.ownerId);
+      const draft = await draftFor(input.draftId, person.ownerId);
       return agentReply(draft.content, translate(locale, scenarios[input.scenario]), 0, [], locale);
     }
     case "persona/revise": {
       const input = z.object({ draftId: idSchema, feedback: z.string().min(1).max(1200), sendApproved: z.literal(true) }).strict().parse(body);
-      const current = draftFor(input.draftId, person.ownerId);
+      const current = await draftFor(input.draftId, person.ownerId);
       ensureNoPrivateText(input.feedback);
-      const proposal = createDraft(person.ownerId, await revisePersona(current.content, input.feedback, locale));
+      const proposal = await createDraft(person.ownerId, await revisePersona(current.content, input.feedback, locale));
       return { draftId: proposal.id, content: proposal.content };
     }
     case "persona/approve": {
       const input = z.object({ personaId:z.string().uuid().optional(), draftId: idSchema, simulationApproved: z.literal(true), examplesApproved: z.literal(true), adultConfirmed: z.literal(true) }).strict().parse(body);
       return locked(`draft:${input.draftId}`, async () => {
-        const draft = draftFor(input.draftId, person.ownerId);
+        const draft = await draftFor(input.draftId, person.ownerId);
         ensureNoPrivateText(draft.content);
         const previous=input.personaId?await capsuleFor(input.personaId):null;
         if(previous&&previous.ownerId!==person.ownerId)throw new ApiError(403,"Persona unavailable");
@@ -97,7 +99,7 @@ async function dispatch(path: string, body: unknown, person: Identity, locale: L
         await saveCapsule(capsule);
         person.personaIds = [capsule.personaId, ...(person.personaIds ?? []).filter(id=>id!==capsule.personaId)];
         await persistIdentity(request, person);
-        state.drafts.delete(draft.id);
+        await deleteDraft(draft.id);
         return { personaId: capsule.personaId, approved: true };
       });
     }
@@ -111,7 +113,7 @@ async function dispatch(path: string, body: unknown, person: Identity, locale: L
         await saveCapsule(capsule);
         person.personaIds = (person.personaIds ?? []).filter(id => id !== capsule.personaId);
         await persistIdentity(request, person);
-        for (const [id, draft] of state.drafts) if (draft.ownerId === person.ownerId) state.drafts.delete(id);
+        await deleteOwnerDrafts(person.ownerId);
         return { revoked: true };
       });
     }
@@ -129,20 +131,20 @@ async function dispatch(path: string, body: unknown, person: Identity, locale: L
       await verifyMatch(person, input.matchId, personaId);
       const game: Game = { id: randomUUID(), ownerId: person.ownerId, personaId, personaVersion: capsule.version, matchId: input.matchId, scene: 0, sceneTurns: 0, completed: false, messages: [], checkpoint: 0, emotion: "neutral", event: "none", expiresAt: Date.now() + 2 * 60 * 60_000 };
       if (input.mode === "rain") { game.story = newRainStory(); game.scene = 1; game.event = "rain"; }
-      state.games.set(game.id, game);
+      await saveGame(game);
       return publicGame(game);
     }
     case "game/message": {
       const input = z.object({ gameId: idSchema, message: z.string().trim().min(1).max(1200) }).strict().parse(body);
       return locked(`game:${input.gameId}`, async () => {
-        const current = ownedGame(input.gameId, person.ownerId);
+        const current = await ownedGame(input.gameId, person.ownerId);
         if (current.completed) throw new ApiError(409, "この会話は終了しています。もう一度始めてください。");
         return locked(`persona:${current.personaId}`, async () => {
           const capsule = await authorizeGame(current, person);
           const reply = await agentReply(capsule.content, input.message, current.scene, current.messages, locale, current.story ? storyContext(current.story, locale) : undefined);
           await authorizeGame(current, person);
           const next = advanceGame(current, input.message, reply);
-          state.games.set(next.id, next);
+          await saveGame(next);
           return { game: publicGame(next), reply };
         });
       });
@@ -150,7 +152,7 @@ async function dispatch(path: string, body: unknown, person: Identity, locale: L
     case "game/action": {
       const input = z.object({ gameId: idSchema, choiceId: idSchema, revision: z.number().int().min(0) }).strict().parse(body);
       return locked(`game:${input.gameId}`, async () => {
-        const current = ownedGame(input.gameId, person.ownerId);
+        const current = await ownedGame(input.gameId, person.ownerId);
         if (!current.story || current.completed || current.story.revision !== input.revision) throw new ApiError(409, "場面が変わりました。現在の選択肢から選んでください。");
         const choice = rainStory[current.story.node].choices.find(c => c.id === input.choiceId);
         if (!choice) throw new ApiError(400, "この場面では選べない行動です。");
@@ -163,7 +165,7 @@ async function dispatch(path: string, body: unknown, person: Identity, locale: L
           const next = advanceGame(current, selected, reply);
           next.story = nextStory;
           next.completed = nextStory.node === "ending";
-          state.games.set(next.id, next);
+          await saveGame(next);
           return { game: publicGame(next), reply };
         });
       });
@@ -171,22 +173,22 @@ async function dispatch(path: string, body: unknown, person: Identity, locale: L
     case "game/retry": {
       const input = z.object({ gameId: idSchema }).strict().parse(body);
       return locked(`game:${input.gameId}`, async () => {
-        const current = ownedGame(input.gameId, person.ownerId);
+        const current = await ownedGame(input.gameId, person.ownerId);
         await authorizeGame(current, person);
         const next = retryGame(current);
-        state.games.set(next.id, next);
-        state.requests.delete(next.id);
+        await saveGame(next);
+        await deleteDateRequest(next.id);
         return publicGame(next);
       });
     }
     case "date-request": {
       const input = z.object({ gameId: idSchema }).strict().parse(body);
       return locked(`game:${input.gameId}`, async () => {
-        const game = ownedGame(input.gameId, person.ownerId);
+        const game = await ownedGame(input.gameId, person.ownerId);
         await authorizeGame(game, person);
         if (!game.completed) throw new ApiError(409, "まずデート体験を完了してください。");
-        const result = state.requests.get(game.id) ?? await sendDateRequest(person, game.matchId, game.id);
-        state.requests.set(game.id, result);
+        const result = await loadDateRequest(game.id) ?? await sendDateRequest(person, game.matchId, game.id);
+        await saveDateRequest(game.id, result, game.expiresAt);
         return { requestId: result.id, demo: result.demo, status: "pending", message: translate(locale, result.demo ? "デモ申請を作成しました。実際の相手には送信されません。" : "デート申請を送りました。双方の承認まで連絡先は公開されません。") };
       });
     }
