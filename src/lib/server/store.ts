@@ -2,7 +2,7 @@ import "server-only";
 import {photoSettingsSchema} from "../photo-persona";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
-import { randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { z } from "zod";
 import { personaContentSchema, type PersonaContent } from "../schemas";
 import { encrypt, decrypt } from "../crypto";
@@ -39,7 +39,7 @@ async function loadKey() {
     if (!/^[a-f\d]{64}$/i.test(supplied)) throw new Error("Encryption key must be 32 bytes in hex");
     return Buffer.from(supplied, "hex");
   }
-  if (!isDemo() || process.env.VERCEL) throw new Error("Encryption key required outside local demo mode");
+  if (!isDemo() || process.env.VERCEL || sharedRedis()) throw new Error("Encryption key required outside local demo mode");
   const directory = resolve(".data");
   await mkdir(directory, { recursive: true });
   const path = join(directory, "demo-encryption-key");
@@ -131,13 +131,21 @@ export async function loadConversation(id: string): Promise<Conversation | undef
   return sharedRedis() ? (await sharedRead<Conversation>(`conversation:${id}`, await key())) ?? undefined : state.conversations.get(id);
 }
 export async function saveConversation(conversation: Conversation) {
-  if (sharedRedis()) await sharedWrite(`conversation:${conversation.id}`, conversation, await key(), conversation.expiresAt);
-  else state.conversations.set(conversation.id, conversation);
+  const redis = sharedRedis();
+  if (redis) {
+    const index = `owner-conversations:${createHash("sha256").update(conversation.ownerId).digest("hex")}`;
+    await sharedWrite(`conversation:${conversation.id}`, conversation, await key(), conversation.expiresAt);
+    await redis.sadd(index, conversation.id);
+    await redis.expire(index, 2 * 60 * 60);
+  } else state.conversations.set(conversation.id, conversation);
 }
 export async function ownerConversations(ownerId: string): Promise<Conversation[]> {
-  if (!sharedRedis()) return [...state.conversations.values()].filter(c => c.ownerId === ownerId && c.expiresAt > Date.now());
-  const names = await sharedKeys("conversation:*");
+  const redis = sharedRedis();
+  if (!redis) return [...state.conversations.values()].filter(c => c.ownerId === ownerId && c.expiresAt > Date.now());
+  const index = `owner-conversations:${createHash("sha256").update(ownerId).digest("hex")}`;
+  const ids = await redis.smembers<string[]>(index);
   const encryptionKey = await key();
-  const values = await Promise.all(names.map(name => sharedRead<Conversation>(name, encryptionKey)));
+  const values = await Promise.all(ids.map(id => sharedRead<Conversation>(`conversation:${id}`, encryptionKey)));
+  await Promise.all(ids.filter((_, i) => !values[i]).map(id => redis.srem(index, id)));
   return values.filter((c): c is Conversation => !!c && c.ownerId === ownerId && c.expiresAt > Date.now());
 }

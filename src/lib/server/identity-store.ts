@@ -20,7 +20,7 @@ export function identityKey() {
     if (!/^[a-f\d]{64}$/i.test(supplied)) throw new Error("Encryption key must be 32 bytes in hex");
     return Buffer.from(supplied, "hex");
   }
-  if (!isDemo() || process.env.VERCEL) throw new Error("Encryption key required outside local demo mode");
+  if (!isDemo() || process.env.VERCEL || sharedRedis()) throw new Error("Encryption key required outside local demo mode");
   const dir = resolve(".data");
   mkdirSync(dir, { recursive: true });
   const keyPath = join(dir, "demo-encryption-key");
