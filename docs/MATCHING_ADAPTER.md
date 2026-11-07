@@ -18,6 +18,10 @@ Response: `{ matchId, agentPersonaId, playerSubject, simulationConsent: true, ex
 
 The service must check participation and current consent server-side. The game validates the subject, exact Persona/match IDs and expiry at start, every message, retry and date request. The client-supplied `simulationConsent` is never authoritative.
 
+## Persona metadata for the matching service
+
+`GET /api/personas/{personaId}/metadata` requires `Authorization: Bearer {PARENT_METADATA_TOKEN}`. Configure a distinct random token of at least 32 characters on the AIBot and matching servers. The endpoint returns only `{ personaId, ownerSubject, status: "approved" | "revoked", version }` with `Cache-Control: no-store`. It reads current server-held Persona state and never returns Persona content. Personas created without a verified matching identity are unavailable through this endpoint. Missing or invalid service credentials fail closed.
+
 ## Date requests
 
 `POST {MATCHING_API_URL}/date-requests`
