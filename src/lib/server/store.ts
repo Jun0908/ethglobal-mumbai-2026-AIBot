@@ -9,7 +9,7 @@ import { encrypt, decrypt } from "../crypto";
 import type { Game } from "../game";
 import type { Conversation } from "../conversation";
 import { isDemo } from "./config";
-import { sharedRead, sharedRedis, sharedWrite } from "./redis-store";
+import { sharedKeys, sharedRead, sharedRedis, sharedWrite } from "./redis-store";
 
 export const capsuleSchema = z.object({
   personaId: z.string().uuid(), ownerId: z.string(), version: z.number().int().positive(),
@@ -77,8 +77,67 @@ export function cleanup() {
   }
   for (const [id, entry] of state.limits) if (entry.until <= now) state.limits.delete(id);
 }
-export function createDraft(ownerId: string, content: PersonaContent): Draft {
+export async function createDraft(ownerId: string, content: PersonaContent): Promise<Draft> {
   const draft = { id: randomUUID(), ownerId, content: personaContentSchema.parse(content), expiresAt: Date.now() + 60 * 60_000 };
-  state.drafts.set(draft.id, draft);
+  if (sharedRedis()) await sharedWrite(`draft:${draft.id}`, draft, await key(), draft.expiresAt);
+  else state.drafts.set(draft.id, draft);
   return draft;
+}
+
+export async function loadDraft(id: string): Promise<Draft | undefined> {
+  if (!z.string().uuid().safeParse(id).success) return;
+  return sharedRedis() ? (await sharedRead<Draft>(`draft:${id}`, await key())) ?? undefined : state.drafts.get(id);
+}
+export async function saveDraft(draft: Draft) {
+  if (sharedRedis()) await sharedWrite(`draft:${draft.id}`, draft, await key(), draft.expiresAt);
+  else state.drafts.set(draft.id, draft);
+}
+export async function deleteDraft(id: string) {
+  const redis = sharedRedis();
+  if (redis) await redis.del(`draft:${id}`);
+  else state.drafts.delete(id);
+}
+export async function deleteOwnerDrafts(ownerId: string) {
+  if (sharedRedis()) {
+    for (const name of await sharedKeys("draft:*")) {
+      const draft = await sharedRead<Draft>(name, await key());
+      if (draft?.ownerId === ownerId) await sharedRedis()!.del(name);
+    }
+  } else for (const [id, draft] of state.drafts) if (draft.ownerId === ownerId) state.drafts.delete(id);
+}
+export async function loadGame(id: string): Promise<Game | undefined> {
+  if (!z.string().uuid().safeParse(id).success) return;
+  return sharedRedis() ? (await sharedRead<Game>(`game:${id}`, await key())) ?? undefined : state.games.get(id);
+}
+export async function saveGame(game: Game) {
+  if (sharedRedis()) await sharedWrite(`game:${game.id}`, game, await key(), game.expiresAt);
+  else state.games.set(game.id, game);
+}
+export async function loadDateRequest(id: string): Promise<{ id: string; demo: boolean } | undefined> {
+  if (!z.string().uuid().safeParse(id).success) return;
+  return sharedRedis() ? (await sharedRead<{ id: string; demo: boolean }>(`date-request:${id}`, await key())) ?? undefined : state.requests.get(id);
+}
+export async function saveDateRequest(id: string, value: { id: string; demo: boolean }, expiresAt: number) {
+  if (sharedRedis()) await sharedWrite(`date-request:${id}`, value, await key(), expiresAt);
+  else state.requests.set(id, value);
+}
+export async function deleteDateRequest(id: string) {
+  const redis = sharedRedis();
+  if (redis) await redis.del(`date-request:${id}`);
+  else state.requests.delete(id);
+}
+export async function loadConversation(id: string): Promise<Conversation | undefined> {
+  if (!z.string().uuid().safeParse(id).success) return;
+  return sharedRedis() ? (await sharedRead<Conversation>(`conversation:${id}`, await key())) ?? undefined : state.conversations.get(id);
+}
+export async function saveConversation(conversation: Conversation) {
+  if (sharedRedis()) await sharedWrite(`conversation:${conversation.id}`, conversation, await key(), conversation.expiresAt);
+  else state.conversations.set(conversation.id, conversation);
+}
+export async function ownerConversations(ownerId: string): Promise<Conversation[]> {
+  if (!sharedRedis()) return [...state.conversations.values()].filter(c => c.ownerId === ownerId && c.expiresAt > Date.now());
+  const names = await sharedKeys("conversation:*");
+  const encryptionKey = await key();
+  const values = await Promise.all(names.map(name => sharedRead<Conversation>(name, encryptionKey)));
+  return values.filter((c): c is Conversation => !!c && c.ownerId === ownerId && c.expiresAt > Date.now());
 }

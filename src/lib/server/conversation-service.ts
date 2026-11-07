@@ -8,20 +8,20 @@ import { chooseStory, rainStory, storyText } from "../rain-story";
 import type { Locale } from "../i18n";
 import { ApiError, locked } from "./security";
 import { isDemo } from "./config";
-import { loadCapsule, saveCapsule, state, type Identity } from "./store";
+import { loadCapsule, loadConversation, ownerConversations, saveCapsule, saveConversation, type Identity } from "./store";
 import { demoPersona } from "./demo";
 import { sendDateRequest, verifyMatch } from "./matching";
 import { conversationReply, generateReflection, playerSuggestions } from "./conversation-llm";
 
 const idBody = z.object({ gameId: z.string().uuid() });
 function fail(locale: Locale, status: number, ja: string, en: string): never { throw new ApiError(status, locale === "en" ? en : ja); }
-function owned(id: string, person: Identity, locale: Locale) {
-  const c = state.conversations.get(id);
+async function owned(id: string, person: Identity, locale: Locale) {
+  const c = await loadConversation(id);
   if (!c || c.ownerId !== person.ownerId || c.expiresAt <= Date.now()) return fail(locale, 404, "会話が見つかりません。期限内の会話を選んでください。", "Conversation not found. Choose an active conversation.");
   return c;
 }
 async function authorize(c: Conversation, person: Identity, locale: Locale) {
-  owned(c.id, person, locale);
+  await owned(c.id, person, locale);
   const capsule = await loadCapsule(c.personaId).catch(() => fail(locale, 404, "相手のAIを利用できません。", "This AI is unavailable."));
   if (!capsule.consent.simulationApproved || capsule.version !== c.personaVersion || (isDemo() && capsule.ownerId !== person.ownerId)) return fail(locale, 403, "相手の利用同意が撤回・更新されました。", "The companion's consent has been withdrawn or updated.");
   await verifyMatch(person, c.matchId, c.personaId);
@@ -43,9 +43,10 @@ export async function dispatchConversation(path: string, body: unknown, person: 
   if (path === "dialogue/start") {
     const input = z.object({ matchId: idSchema, agentPersonaId: idSchema, fresh: z.boolean().default(false) }).strict().parse(body);
     return locked(`conversation-start:${person.ownerId}`, async () => {
-      const previous = [...state.conversations.values()].filter(c => c.ownerId === person.ownerId && c.partnerRef === input.agentPersonaId && c.matchId === input.matchId && c.expiresAt > Date.now()).sort((a, b) => b.updatedAt - a.updatedAt)[0];
-      if (previous && !input.fresh) return locked(`conversation:${previous.id}`, async () => { const latest = owned(previous.id, person, locale); await authorize(latest, person, locale); touch(latest, person); await localizeSuggestions(latest, locale); return publicConversation(latest); });
-      if ([...state.conversations.values()].filter(c => c.ownerId === person.ownerId).length >= 20) return fail(locale, 429, "会話が20件あります。今ある会話の続きを楽しんでください。", "You have 20 conversations. Please continue an existing one.");
+      const existing = await ownerConversations(person.ownerId);
+      const previous = existing.filter(c => c.partnerRef === input.agentPersonaId && c.matchId === input.matchId).sort((a, b) => b.updatedAt - a.updatedAt)[0];
+      if (previous && !input.fresh) return locked(`conversation:${previous.id}`, async () => { const latest = await owned(previous.id, person, locale); await authorize(latest, person, locale); touch(latest, person); await localizeSuggestions(latest, locale); await saveConversation(latest); return publicConversation(latest); });
+      if (existing.length >= 20) return fail(locale, 429, "会話が20件あります。今ある会話の続きを楽しんでください。", "You have 20 conversations. Please continue an existing one.");
       let personaId = input.agentPersonaId;
       const demo = isDemo() && ["demo-calm", "demo-playful"].includes(personaId);
       if (demo) {
@@ -57,14 +58,14 @@ export async function dispatchConversation(path: string, body: unknown, person: 
       if (!capsule.consent.simulationApproved || (isDemo() && capsule.ownerId !== person.ownerId)) return fail(locale, 403, "相手の利用同意を確認できません。", "Could not verify consent for this companion.");
       await verifyMatch(person, input.matchId, personaId);
       const c = createConversation({ id: randomUUID(), ownerId: person.ownerId, personaId, personaVersion: capsule.version, matchId: input.matchId, partnerRef: input.agentPersonaId, partnerKey: previous?.partnerKey, partnerName: demo ? input.agentPersonaId === "demo-calm" ? "Asha" : "Mira" : "Your match" }, locale, Math.min(person.expiresAt, Date.now() + 2 * 60 * 60_000));
-      state.conversations.set(c.id, c);
+      await saveConversation(c);
       return publicConversation(c);
     });
   }
   if (path === "dialogue/list") {
     z.object({}).strict().parse(body);
     const items = [];
-    for (const c of state.conversations.values()) {
+    for (const c of await ownerConversations(person.ownerId)) {
       if (c.ownerId !== person.ownerId || c.expiresAt <= Date.now()) continue;
       try { await authorize(c, person, locale); items.push(conversationSummary(c, locale)); }
       catch (e) { if (!(e instanceof ApiError) || ![403, 404].includes(e.status)) throw e; }
@@ -73,25 +74,26 @@ export async function dispatchConversation(path: string, body: unknown, person: 
   }
   if (path === "dialogue/get") {
     const { gameId } = idBody.strict().parse(body);
-    return locked(`conversation:${gameId}`, async () => { const c = owned(gameId, person, locale); await authorize(c, person, locale); touch(c, person); await localizeSuggestions(c, locale); return publicConversation(c); });
+    return locked(`conversation:${gameId}`, async () => { const c = await owned(gameId, person, locale); await authorize(c, person, locale); touch(c, person); await localizeSuggestions(c, locale); await saveConversation(c); return publicConversation(c); });
   }
   if (path === "dialogue/reflection") {
     const { gameId } = idBody.strict().parse(body);
-    const current = owned(gameId, person, locale); await authorize(current, person, locale);
+    const current = await owned(gameId, person, locale); await authorize(current, person, locale);
     const snapshot = structuredClone(current);
     return locked(`reflection:${gameId}:${snapshot.revision}:${locale}`, async () => {
       const cached = current.reports.find(r => r.revision === snapshot.revision && r.locale === locale && r.version === 1);
       if (cached) return cached;
       const result = await generateReflection(gameId, snapshot.revision, snapshot.messages, locale);
-      const latest = owned(gameId, person, locale); await authorize(latest, person, locale);
+      const latest = await owned(gameId, person, locale); await authorize(latest, person, locale);
       latest.reports = [...latest.reports.filter(r => !(r.locale === locale && r.revision <= result.revision)), result].sort((a, b) => a.revision - b.revision).slice(-8);
+      await saveConversation(latest);
       return result;
     });
   }
   if (path === "dialogue/feedback") {
     const input = idBody.extend({ feelings: feelingSchema.optional(), dismiss: z.object({ reportId: z.string().uuid(), dimension: z.enum(dimensionIds), dismissed: z.boolean() }).optional() }).strict().parse(body);
     return locked(`conversation:${input.gameId}`, async () => {
-      const c = owned(input.gameId, person, locale); await authorize(c, person, locale);
+      const c = await owned(input.gameId, person, locale); await authorize(c, person, locale);
       if (input.feelings) c.feelings = input.feelings;
       if (input.dismiss) {
         if (!c.reports.some(r => r.id === input.dismiss!.reportId)) return fail(locale, 409, "新しい振り返りを開いてください。", "Please open the current reflection.");
@@ -99,22 +101,23 @@ export async function dispatchConversation(path: string, body: unknown, person: 
         c.dismissed = c.dismissed.filter(value => value !== key);
         if (input.dismiss.dismissed) c.dismissed.push(key);
       }
-      return publicConversation(c);
+      await saveConversation(c); return publicConversation(c);
     });
   }
   if (path === "dialogue/date") {
     const { gameId } = idBody.strict().parse(body);
     return locked(`conversation:${gameId}`, async () => {
-      const c = owned(gameId, person, locale); await authorize(c, person, locale);
+      const c = await owned(gameId, person, locale); await authorize(c, person, locale);
       if (c.story.node !== "ending") return fail(locale, 409, "物語を終えてから申請できます。会話は続けられます。", "Finish the story before requesting a date. You can keep talking.");
       c.request ??= await sendDateRequest(person, c.matchId, c.id);
+      await saveConversation(c);
       return publicConversation(c);
     });
   }
   if (path === "dialogue/message" || path === "dialogue/action") {
     const input = idBody.extend({ revision: z.number().int().min(0), clientTurnId: z.string().uuid(), message: z.string().trim().min(1).max(1200).optional(), suggestionId: z.string().max(100).optional(), choiceId: z.string().max(100).optional() }).strict().parse(body);
     return locked(`conversation:${input.gameId}`, async () => {
-      const c = owned(input.gameId, person, locale); const capsule = await authorize(c, person, locale);
+      const c = await owned(input.gameId, person, locale); const capsule = await authorize(c, person, locale);
       const fingerprint = JSON.stringify([path, input.revision, input.message, input.suggestionId, input.choiceId, locale]);
       const prior = c.receipts[input.clientTurnId];
       if (prior) {
@@ -161,7 +164,7 @@ export async function dispatchConversation(path: string, body: unknown, person: 
       // Analysis and feedback may have completed while the response was generating.
       next.reports = c.reports; next.dismissed = c.dismissed; next.feelings = c.feelings;
       next.receipts[input.clientTurnId] = { fingerprint, revision: next.revision };
-      touch(next, person); state.conversations.set(next.id, next);
+      touch(next, person); await saveConversation(next);
       return publicConversation(next);
     });
   }
