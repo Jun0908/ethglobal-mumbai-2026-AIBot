@@ -7,10 +7,19 @@ import { isDemo } from "./config";
 import { translate, type Locale } from "../i18n";
 import { requestOrigin } from "../request-origin";
 import { deleteIdentity, loadIdentity, saveIdentity } from "./identity-store";
+import { sharedLock, sharedRedis } from "./redis-store";
 
 export class ApiError extends Error { constructor(public status: number, message: string) { super(message); } }
 const cookieName = "masala_session";
-export function rateLimit(key: string, max = 40, windowMs = 60_000) {
+export async function rateLimit(key: string, max = 40, windowMs = 60_000) {
+  const redis = sharedRedis();
+  if (redis) {
+    const bucket = `limit:${key}`;
+    const count = await redis.incr(bucket);
+    if (count === 1) await redis.pexpire(bucket, windowMs);
+    if (count > max) throw new ApiError(429, "利用回数の上限です。少し待ってから再試行してください。");
+    return;
+  }
   const now = Date.now();
   let bucket = state.limits.get(key);
   if (!bucket || bucket.until <= now) { bucket = { count: 0, until: now + windowMs }; state.limits.set(key, bucket); }
@@ -22,13 +31,13 @@ export function checkOrigin(request: NextRequest) {
   if (origin && origin !== requestOrigin(request)) throw new ApiError(403, "この送信元からは操作できません。");
   if (request.headers.get("sec-fetch-site") === "cross-site") throw new ApiError(403, "この送信元からは操作できません。");
 }
-export function identity(request: NextRequest): Identity {
+export async function identity(request: NextRequest): Promise<Identity> {
   cleanup();
   const token = request.cookies.get(cookieName)?.value;
-  const session = token ? state.identities.get(token) ?? loadIdentity(token) : undefined;
+  const session = token ? sharedRedis() ? await loadIdentity(token) : state.identities.get(token) ?? await loadIdentity(token) : undefined;
   if (!session) throw new ApiError(401, "セッションが切れました。ページを再読み込みしてください。");
   if (token && !state.identities.has(token)) state.identities.set(token, session);
-  rateLimit(`owner:${session.ownerId}`);
+  await rateLimit(`owner:${session.ownerId}`);
   return session;
 }
 function verifyAssertion(token: string) {
@@ -47,24 +56,24 @@ function verifyAssertion(token: string) {
   if (claims.exp * 1000 <= Date.now() || claims.exp * 1000 > Date.now() + 15 * 60_000) throw new ApiError(401, "本人確認トークンの期限が無効です。");
   return claims.sub;
 }
-export function createIdentity(request: NextRequest, assertion?: string) {
+export async function createIdentity(request: NextRequest, assertion?: string) {
   cleanup();
-  rateLimit("new-session-global", 60);
+  await rateLimit("new-session-global", 60);
   const previous = request.cookies.get(cookieName)?.value;
-  const existing = previous ? state.identities.get(previous) ?? loadIdentity(previous) : undefined;
+  const existing = previous ? sharedRedis() ? await loadIdentity(previous) : state.identities.get(previous) ?? await loadIdentity(previous) : undefined;
   if (existing && !assertion) return { identity: existing, token: previous! };
   const subject = isDemo() ? null : verifyAssertion(assertion || "");
   const token = randomBytes(32).toString("base64url");
   const session = { ownerId: subject ? `psi:${subject}` : randomBytes(24).toString("base64url"), subject, expiresAt: Date.now() + (isDemo() ? 30 * 24 : 8) * 60 * 60_000, personaIds: [] as string[] };
-  saveIdentity(token, session);
+  await saveIdentity(token, session);
   state.identities.set(token, session);
-  if (previous) { state.identities.delete(previous); deleteIdentity(previous); }
+  if (previous) { state.identities.delete(previous); await deleteIdentity(previous); }
   return { identity: session, token };
 }
-export function persistIdentity(request: NextRequest, person: Identity) {
+export async function persistIdentity(request: NextRequest, person: Identity) {
   const token = request.cookies.get(cookieName)?.value;
   if (!token) throw new ApiError(401, "セッションが切れました。ページを再読み込みしてください。");
-  saveIdentity(token, person);
+  await saveIdentity(token, person);
 }
 export function setIdentityCookie(response: NextResponse, token: string, request: NextRequest) {
   response.cookies.set(cookieName, token, { httpOnly: true, sameSite: "strict", secure: requestOrigin(request).startsWith("https:"), path: "/", maxAge: (isDemo() ? 30 * 24 : 8) * 60 * 60 });
@@ -86,6 +95,10 @@ export async function readBody(request: NextRequest) {
   catch { throw new ApiError(400, "入力形式が正しくありません。"); }
 }
 export async function locked<T>(key: string, run: () => Promise<T>): Promise<T> {
+  if (sharedRedis()) {
+    try { return await sharedLock(key, run); }
+    catch (error) { if (error instanceof Error && error.message === "LOCKED") throw new ApiError(409, "処理中です。完了を待ってください。"); throw error; }
+  }
   if (state.locks.has(key)) throw new ApiError(409, "処理中です。完了を待ってください。");
   state.locks.add(key);
   try { return await run(); } finally { state.locks.delete(key); }

@@ -96,7 +96,7 @@ async function dispatch(path: string, body: unknown, person: Identity, locale: L
         const capsule: Capsule = { visual:draft.visual, personaId: previous?.personaId??randomUUID(), ownerId: person.ownerId, version: (previous?.version??0)+1, content: draft.content, boundaries: { revealPrivateInformation: false, allowSensitiveQuestions: false }, consent: { simulationApproved: true, approvedAt: new Date().toISOString() } };
         await saveCapsule(capsule);
         person.personaIds = [capsule.personaId, ...(person.personaIds ?? []).filter(id=>id!==capsule.personaId)];
-        persistIdentity(request, person);
+        await persistIdentity(request, person);
         state.drafts.delete(draft.id);
         return { personaId: capsule.personaId, approved: true };
       });
@@ -110,7 +110,7 @@ async function dispatch(path: string, body: unknown, person: Identity, locale: L
         capsule.version += 1;
         await saveCapsule(capsule);
         person.personaIds = (person.personaIds ?? []).filter(id => id !== capsule.personaId);
-        persistIdentity(request, person);
+        await persistIdentity(request, person);
         for (const [id, draft] of state.drafts) if (draft.ownerId === person.ownerId) state.drafts.delete(id);
         return { revoked: true };
       });
@@ -196,7 +196,7 @@ async function dispatch(path: string, body: unknown, person: Identity, locale: L
 export async function GET(request: NextRequest) {
   const locale = readLocale(request.headers.get("x-masala-language"));
   if (request.nextUrl.pathname === "/api/session") {
-    try { const person = identity(request); return json({ ready: true, personaIds: person.personaIds ?? [] }); }
+    try { const person = await identity(request); return json({ ready: true, personaIds: person.personaIds ?? [] }); }
     catch { return json({ ready: false }, 401); }
   }
   if (request.nextUrl.pathname !== "/api/config") return json({ error: "Not found" }, 404);
@@ -211,12 +211,12 @@ export async function POST(request: NextRequest) {
     const path = request.nextUrl.pathname.replace(/^\/api\//, "");
     if (path === "session") {
       const input = z.object({ adultConfirmed: z.literal(true), assertion: z.string().max(2000).optional() }).strict().parse(body);
-      const session = createIdentity(request, input.assertion);
+      const session = await createIdentity(request, input.assertion);
       const response = json({ ready: true, demoMode: isDemo(), llmMode: llmMode() });
       setIdentityCookie(response, session.token, request);
       return response;
     }
-    const person = identity(request);
+    const person = await identity(request);
     return json(await dispatch(path, body, person, locale, request));
   } catch (error) {
     if (error instanceof ApiError) return json({ error: translate(locale, error.message) }, error.status);

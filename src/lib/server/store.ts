@@ -9,6 +9,7 @@ import { encrypt, decrypt } from "../crypto";
 import type { Game } from "../game";
 import type { Conversation } from "../conversation";
 import { isDemo } from "./config";
+import { sharedRead, sharedRedis, sharedWrite } from "./redis-store";
 
 export const capsuleSchema = z.object({
   personaId: z.string().uuid(), ownerId: z.string(), version: z.number().int().positive(),
@@ -38,7 +39,7 @@ async function loadKey() {
     if (!/^[a-f\d]{64}$/i.test(supplied)) throw new Error("Encryption key must be 32 bytes in hex");
     return Buffer.from(supplied, "hex");
   }
-  if (!isDemo()) throw new Error("Encryption key required outside demo mode");
+  if (!isDemo() || process.env.VERCEL) throw new Error("Encryption key required outside local demo mode");
   const directory = resolve(".data");
   await mkdir(directory, { recursive: true });
   const path = join(directory, "demo-encryption-key");
@@ -52,6 +53,7 @@ export function storageKey() { return state.key ??= loadKey(); }
 const key = storageKey;
 export async function saveCapsule(capsule: Capsule) {
   capsuleSchema.parse(capsule);
+  if (sharedRedis()) { await sharedWrite(`capsule:${capsule.personaId}`, capsule, await key()); return; }
   await mkdir(dataDir(), { recursive: true });
   const target = join(dataDir(), `${capsule.personaId}.json`);
   const temp = `${target}.${randomUUID()}.tmp`;
@@ -60,6 +62,11 @@ export async function saveCapsule(capsule: Capsule) {
 }
 export async function loadCapsule(id: string): Promise<Capsule> {
   if (!z.string().uuid().safeParse(id).success) throw new Error("Invalid capsule ID");
+  if (sharedRedis()) {
+    const capsule = await sharedRead<Capsule>(`capsule:${id}`, await key());
+    if (!capsule) throw new Error("Capsule not found");
+    return capsuleSchema.parse(capsule);
+  }
   const raw = await readFile(join(dataDir(), `${id}.json`), "utf8");
   return capsuleSchema.parse(decrypt(JSON.parse(raw), await key()));
 }

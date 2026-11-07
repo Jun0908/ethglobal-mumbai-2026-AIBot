@@ -11,10 +11,10 @@ export const runtime='nodejs';
 const inputSchema=z.object({op:z.enum(['get','reply','next','forget','delete','feeling','practice','restore']),story:z.enum(['mira','asha']).default('mira'),locale:z.enum(['ja','en']),revision:z.number().int().nonnegative().optional(),turnId:z.string().uuid().optional(),option:z.number().int().min(0).max(2).optional(),message:z.string().trim().min(1).max(1200).optional(),memoryId:z.string().uuid().optional(),feeling:z.enum(['natural','effort','unsure']).optional()}).strict();
 export async function POST(request:NextRequest){
  try{
- if(!isDemo())throw new ApiError(404,'Not available');checkOrigin(request);rateLimit('romance:global',180);
+ if(!isDemo())throw new ApiError(404,'Not available');checkOrigin(request);await rateLimit('romance:global',180);
  const input=inputSchema.parse(await readBody(request)),locale=input.locale,story=input.story;const {beats}=storyFor(story);const cookieName=story==='asha'?'masala_romance_asha':'masala_romance';
  const supplied=request.cookies.get(cookieName)?.value;
- const token=supplied&&/^[a-f0-9]{64}$/.test(supplied)?supplied:randomBytes(32).toString('hex');rateLimit('romance:'+token,40);
+ const token=supplied&&/^[a-f0-9]{64}$/.test(supplied)?supplied:randomBytes(32).toString('hex');await rateLimit('romance:'+token,40);
  await expireRomanceSaves();
  return await locked('romance:'+token,async()=>{
  let state=await readRomance(token,locale,story);let fallback=false;

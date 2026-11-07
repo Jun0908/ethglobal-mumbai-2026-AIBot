@@ -16,11 +16,11 @@ export const runtime='nodejs';
 const input=z.object({op:z.enum(['get','chat','start','choose','cancel','save','forget']),target:z.string().min(1).max(100),matchId:z.string().min(1).max(100).optional(),locale:z.enum(['ja','en']),revision:z.number().int().nonnegative().optional(),turnId:z.string().uuid().optional(),message:z.string().trim().min(1).max(1200).optional(),choice:z.number().int().min(0).max(3).optional(),topic:z.enum(['photos','food','places','music','games','daily']).optional(),userId:z.string().uuid().optional()}).strict();
 const resultSchema=z.object({dialogue:z.string().min(1).max(700),topic:z.enum(['photos','food','places','music','games','daily']).nullable(),userQuote:z.string().max(180),partnerQuote:z.string().max(180)});
 export async function POST(request:NextRequest){try{
- checkOrigin(request);const person=identity(request),i=input.parse(await readBody(request));const p=(ja:string,en:string)=>i.locale==='ja'?ja:en;
+ checkOrigin(request);const person=await identity(request),i=input.parse(await readBody(request));const p=(ja:string,en:string)=>i.locale==='ja'?ja:en;
  const demo=['demo-playful','demo-calm'].includes(i.target);if(demo&&!isDemo())throw new ApiError(403,'Demo unavailable');
  const capsule=demo?null:await loadCapsule(i.target).catch(()=>{throw new ApiError(404,'Persona unavailable');});
  if(capsule&&!capsule.consent.simulationApproved)throw new ApiError(403,p('この分身は利用できません。','This twin is unavailable.'));
- const invited=capsule?.ownerId!==person.ownerId&&!!request.cookies.get('masala_invite')?.value&&validateInvitation(request.cookies.get('masala_invite')!.value);
+ const invited=capsule?.ownerId!==person.ownerId&&!!request.cookies.get('masala_invite')?.value&&await validateInvitation(request.cookies.get('masala_invite')!.value);
  const inviteAllowed=!!(invited&&capsule&&invited.personaId===capsule.personaId&&invited.version===capsule.version);
  if(capsule&&capsule.ownerId!==person.ownerId&&!inviteAllowed)await verifyMatch(person,i.matchId||'',i.target);
  const supplied=request.cookies.get('masala_companion')?.value;
@@ -55,7 +55,7 @@ export async function POST(request:NextRequest){try{
  s.receipts=Object.fromEntries(Object.entries(s.receipts).slice(-128));
  }
  }
- if(capsule){const latest=await loadCapsule(capsule.personaId);if(!latest.consent.simulationApproved||latest.version!==capsule.version)throw new ApiError(403,'Persona changed');if(inviteAllowed&&!validateInvitation(request.cookies.get('masala_invite')!.value))throw new ApiError(403,'Invite expired');}
+ if(capsule){const latest=await loadCapsule(capsule.personaId);if(!latest.consent.simulationApproved||latest.version!==capsule.version)throw new ApiError(403,'Persona changed');if(inviteAllowed&&!await validateInvitation(request.cookies.get('masala_invite')!.value))throw new ApiError(403,'Invite expired');}
  await saveCompanion(key,s);const {receipts,...publicState}=s;void receipts;void topicLabels;const response=NextResponse.json({state:publicState,fallback},{headers:{'Cache-Control':'no-store'}});response.cookies.set('masala_companion',browserToken,{httpOnly:true,sameSite:'strict',secure:requestOrigin(request).startsWith('https:'),path:'/',maxAge:30*86400});return response;
  });
  }catch(e){return NextResponse.json({error:e instanceof ApiError?e.message:'処理できませんでした。 / Please try again.'},{status:e instanceof ApiError?e.status:e instanceof z.ZodError?400:500});}}
