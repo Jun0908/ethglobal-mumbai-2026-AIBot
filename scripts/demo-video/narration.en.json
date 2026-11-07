@@ -1,0 +1,128 @@
+[
+  {
+    "clip": "home",
+    "start": 0,
+    "duration": 9,
+    "text": "What would it feel like to spend time together before you meet? This is Secret Tender."
+  },
+  {
+    "clip": "create",
+    "start": 9,
+    "duration": 6,
+    "text": "Start by creating your own AI twin, without writing a long biography."
+  },
+  {
+    "clip": "photos",
+    "start": 15,
+    "duration": 10,
+    "text": "Choose photos that reflect the moments you enjoy, like a cafe, a city walk, or your favorite food."
+  },
+  {
+    "clip": "photo_montage",
+    "start": 25,
+    "duration": 14,
+    "text": "Explore activities, travel, quiet afternoons, and evenings together. These choices express your preferences. You can skip a question and make changes later."
+  },
+  {
+    "clip": "personality",
+    "start": 39,
+    "duration": 10,
+    "text": "Choose how you tend to connect. Do you warm up slowly, enjoy playful conversations, or prefer listening first?"
+  },
+  {
+    "clip": "personality_detail",
+    "start": 49,
+    "duration": 11,
+    "text": "Set your pace in romance, what makes you feel cared for, and how you like to plan or handle differences."
+  },
+  {
+    "clip": "preview_setup",
+    "start": 60,
+    "duration": 8,
+    "text": "Ask your twin a simple question about what it would enjoy doing on a free afternoon."
+  },
+  {
+    "clip": "preview_reply",
+    "start": 68,
+    "duration": 10,
+    "text": "Read the answer. Does it feel like you? You can adjust your choices and tone before approving."
+  },
+  {
+    "clip": "approve",
+    "start": 78,
+    "duration": 8,
+    "text": "When you are comfortable, approve your preferences and the example response for simulation. You stay in control."
+  },
+  {
+    "clip": "invite",
+    "start": 86,
+    "duration": 8,
+    "text": "Create an invitation so someone else can meet your approved twin. You can stop the link later."
+  },
+  {
+    "clip": "meet_invited_twin",
+    "start": 94,
+    "duration": 6,
+    "text": "Here, a visitor opens the invitation in a separate browser session."
+  },
+  {
+    "clip": "chat_one_send",
+    "start": 100,
+    "duration": 6,
+    "text": "They start with a simple question about a cafe and a photography walk."
+  },
+  {
+    "clip": "chat_one_reply",
+    "start": 106,
+    "duration": 9,
+    "text": "The twin responds using its approved communication tendencies and the current conversation, giving the visitor something to explore."
+  },
+  {
+    "clip": "chat_two_send",
+    "start": 115,
+    "duration": 6,
+    "text": "A follow-up about little bookshops keeps the conversation moving."
+  },
+  {
+    "clip": "chat_two_reply",
+    "start": 121,
+    "duration": 9,
+    "text": "They find a topic to continue in person. The simulation does not predict the real person's feelings."
+  },
+  {
+    "clip": "game_start",
+    "start": 130,
+    "duration": 8,
+    "text": "A small date-planning game gives you something to decide and enjoy together."
+  },
+  {
+    "clip": "game_choices",
+    "start": 138,
+    "duration": 10,
+    "text": "Choose where to meet, then decide on the next stop. Share an idea, agree, or suggest something different."
+  },
+  {
+    "clip": "game_ending",
+    "start": 148,
+    "duration": 8,
+    "text": "When rain changes the plan, choose how to adapt. Your decisions become a small shared memory."
+  },
+  {
+    "clip": "dashboard",
+    "start": 156,
+    "duration": 9,
+    "text": "The dashboard brings together topics you discussed, moments from the conversation, and the plan you made."
+  },
+  {
+    "clip": "memories",
+    "start": 165,
+    "duration": 8,
+    "text": "Revisit a memory and its conversation. Notice what makes you curious about the person."
+  },
+  {
+    "clip": "continue_in_person",
+    "start": 173,
+    "duration": 7,
+    "text": "Save something to ask in person. Secret Tender. A little time together, before you meet."
+  }
+]
