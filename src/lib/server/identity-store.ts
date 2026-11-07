@@ -5,7 +5,7 @@ import { join, resolve } from "node:path";
 import { z } from "zod";
 import { decrypt, encrypt } from "../crypto";
 import { isDemo } from "./config";
-import { sharedRead, sharedRedis, sharedWrite } from "./redis-store";
+import { sharedName, sharedRead, sharedRedis, sharedWrite } from "./redis-store";
 
 const sessionSchema = z.object({
   ownerId: z.string().min(1), subject: z.string().nullable(),
@@ -59,7 +59,7 @@ export async function saveIdentity(token: string, identity: StoredIdentity) {
 }
 export async function deleteIdentity(token: string) {
   const redis = sharedRedis();
-  if (redis) { await redis.del(`identity:${createHash("sha256").update(token).digest("hex")}`); return; }
+  if (redis) { await redis.del(sharedName(`identity:${createHash("sha256").update(token).digest("hex")}`)); return; }
   try { unlinkSync(filename(token)); }
   catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
 }

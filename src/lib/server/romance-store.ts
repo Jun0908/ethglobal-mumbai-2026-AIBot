@@ -6,7 +6,7 @@ import {encrypt,decrypt} from '../crypto';
 import {storageKey} from './store';
 import {newRomance,type RomanceState,type StoryId} from '../romance-story';
 import type {Locale} from '../i18n';
-import {sharedRead,sharedRedis,sharedWrite} from './redis-store';
+import {sharedName,sharedRead,sharedRedis,sharedWrite} from './redis-store';
 export const romanceTTL=30*24*60*60*1000;
 const directory=()=>resolve('.data/romance');
 function path(token:string){if(!/^[a-f0-9]{64}$/.test(token))throw new Error('Invalid token');return join(directory(),createHash('sha256').update(token).digest('hex')+'.json');}
@@ -22,7 +22,7 @@ export async function saveRomance(token:string,state:RomanceState){
  await mkdir(directory(),{recursive:true});const target=path(token),temp=target+'.'+randomUUID()+'.tmp';
  try{await writeFile(temp,JSON.stringify(encrypt(state,await storageKey())),{mode:0o600});await rename(temp,target);}catch(error){await unlink(temp).catch(()=>{});throw error;}
 }
-export async function removeRomance(token:string){const redis=sharedRedis();if(redis){await redis.del('romance:'+createHash('sha256').update(token).digest('hex'));return;}await unlink(path(token)).catch(error=>{if(error.code!=='ENOENT')throw error;});}
+export async function removeRomance(token:string){const redis=sharedRedis();if(redis){await redis.del(sharedName('romance:'+createHash('sha256').update(token).digest('hex')));return;}await unlink(path(token)).catch(error=>{if(error.code!=='ENOENT')throw error;});}
 let lastSweep=0;
 export async function expireRomanceSaves(){
  if(sharedRedis())return;

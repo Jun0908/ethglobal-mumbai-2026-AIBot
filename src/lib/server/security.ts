@@ -7,14 +7,14 @@ import { isDemo } from "./config";
 import { translate, type Locale } from "../i18n";
 import { requestOrigin } from "../request-origin";
 import { deleteIdentity, loadIdentity, saveIdentity } from "./identity-store";
-import { sharedLock, sharedRedis } from "./redis-store";
+import { sharedLock, sharedName, sharedRedis } from "./redis-store";
 
 export class ApiError extends Error { constructor(public status: number, message: string) { super(message); } }
 const cookieName = "masala_session";
 export async function rateLimit(key: string, max = 40, windowMs = 60_000) {
   const redis = sharedRedis();
   if (redis) {
-    const bucket = `limit:${key}`;
+    const bucket = sharedName(`limit:${key}`);
     const count = await redis.incr(bucket);
     if (count === 1) await redis.pexpire(bucket, windowMs);
     if (count > max) throw new ApiError(429, "利用回数の上限です。少し待ってから再試行してください。");

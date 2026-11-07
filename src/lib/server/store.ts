@@ -9,7 +9,7 @@ import { encrypt, decrypt } from "../crypto";
 import type { Game } from "../game";
 import type { Conversation } from "../conversation";
 import { isDemo } from "./config";
-import { sharedKeys, sharedRead, sharedRedis, sharedWrite } from "./redis-store";
+import { sharedKeys, sharedName, sharedRead, sharedRedis, sharedWrite } from "./redis-store";
 
 export const capsuleSchema = z.object({
   personaId: z.string().uuid(), ownerId: z.string(), version: z.number().int().positive(),
@@ -94,14 +94,14 @@ export async function saveDraft(draft: Draft) {
 }
 export async function deleteDraft(id: string) {
   const redis = sharedRedis();
-  if (redis) await redis.del(`draft:${id}`);
+  if (redis) await redis.del(sharedName(`draft:${id}`));
   else state.drafts.delete(id);
 }
 export async function deleteOwnerDrafts(ownerId: string) {
   if (sharedRedis()) {
     for (const name of await sharedKeys("draft:*")) {
       const draft = await sharedRead<Draft>(name, await key());
-      if (draft?.ownerId === ownerId) await sharedRedis()!.del(name);
+      if (draft?.ownerId === ownerId) await sharedRedis()!.del(sharedName(name));
     }
   } else for (const [id, draft] of state.drafts) if (draft.ownerId === ownerId) state.drafts.delete(id);
 }
@@ -123,7 +123,7 @@ export async function saveDateRequest(id: string, value: { id: string; demo: boo
 }
 export async function deleteDateRequest(id: string) {
   const redis = sharedRedis();
-  if (redis) await redis.del(`date-request:${id}`);
+  if (redis) await redis.del(sharedName(`date-request:${id}`));
   else state.requests.delete(id);
 }
 export async function loadConversation(id: string): Promise<Conversation | undefined> {
@@ -133,7 +133,7 @@ export async function loadConversation(id: string): Promise<Conversation | undef
 export async function saveConversation(conversation: Conversation) {
   const redis = sharedRedis();
   if (redis) {
-    const index = `owner-conversations:${createHash("sha256").update(conversation.ownerId).digest("hex")}`;
+    const index = sharedName(`owner-conversations:${createHash("sha256").update(conversation.ownerId).digest("hex")}`);
     await sharedWrite(`conversation:${conversation.id}`, conversation, await key(), conversation.expiresAt);
     await redis.sadd(index, conversation.id);
     await redis.expire(index, 2 * 60 * 60);
@@ -142,7 +142,7 @@ export async function saveConversation(conversation: Conversation) {
 export async function ownerConversations(ownerId: string): Promise<Conversation[]> {
   const redis = sharedRedis();
   if (!redis) return [...state.conversations.values()].filter(c => c.ownerId === ownerId && c.expiresAt > Date.now());
-  const index = `owner-conversations:${createHash("sha256").update(ownerId).digest("hex")}`;
+  const index = sharedName(`owner-conversations:${createHash("sha256").update(ownerId).digest("hex")}`);
   const ids = await redis.smembers<string[]>(index);
   const encryptionKey = await key();
   const values = await Promise.all(ids.map(id => sharedRead<Conversation>(`conversation:${id}`, encryptionKey)));
