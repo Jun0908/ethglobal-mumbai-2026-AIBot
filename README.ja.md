@@ -91,6 +91,7 @@ Next.js App Router / React / TypeScript / Lism CSS / OpenAI Responses API / Zod 
 物語の分岐やゲーム状態はコードで管理し、AIはPersonaを反映した台詞を生成します。ダッシュボードの話題や振り返りは実際の発言を根拠にし、根拠不足は未判定にします。物語の関係表示はシミュレーション内の進展であり、実人物の好意を示すものではありません。
 
 - [タスクと実装履歴](task.md)
+- [Playwrightによるデモ動画の録画と編集](docs/DEMO_VIDEO.md)
 - [イラストで選ぶ性格・恋愛の項目](docs/ILLUSTRATED_PERSONALITY.md)
 - [招待された分身の体験](docs/INVITED_TWIN_FLOW.md)
 - [友達への試遊案内](docs/FRIEND_PLAYTEST.md)

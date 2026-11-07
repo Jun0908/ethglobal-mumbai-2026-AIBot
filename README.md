@@ -91,6 +91,7 @@ Next.js App Router · React · TypeScript · Lism CSS · OpenAI Responses API ·
 Story branches and game state are controlled by code; the model generates persona-aware dialogue. Dashboard topics and reflections reference actual messages, and insufficient evidence stays unknown. A story’s relationship display describes the simulation, not a real person’s attraction.
 
 - [Task list and implementation history](task.md)
+- [Playwright demo video recording and editing](docs/DEMO_VIDEO.md)
 - [Illustrated personality choices](docs/ILLUSTRATED_PERSONALITY.md)
 - [Invited twin flow](docs/INVITED_TWIN_FLOW.md)
 - [Friend playtest guide](docs/FRIEND_PLAYTEST.md)
