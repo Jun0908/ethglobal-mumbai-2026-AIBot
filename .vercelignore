@@ -1,0 +1,19 @@
+# Local secrets and private state
+.env
+.env.*
+!.env.example
+.data/
+data/private/
+*.pem
+*.key
+
+# Local build and work artifacts
+.next/
+.vercel/
+node_modules/
+tsconfig.tsbuildinfo
+.chart-data-*/
+.codex-appendix-build/
+.playwright-mcp/
+output/
+tmp/
