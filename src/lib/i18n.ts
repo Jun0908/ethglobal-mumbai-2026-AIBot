@@ -2,6 +2,18 @@ export type Locale = "ja" | "en";
 export function readLocale(value: string | null | undefined): Locale { return value === "en" ? "en" : "ja"; }
 
 export const english: Record<string, string> = {
+  "会う前に、ふたりの時間を。": "A little time together, before you meet.",
+  "気になる人のAIの分身と、話したり、小さなデートを楽しんだり。一緒に笑えた話題から、本人に会ってみたい気持ちへ。": "Talk with someone’s AI twin and share a little date. Discover what makes you laugh together—and what you’d love to ask when you meet.",
+  "自分の分身をつくる": "Create your AI twin",
+  "AIの分身との体験です。本人との会話は、ここから。": "An experience with an AI twin. A starting point for meeting the person.",
+  "ふたりを知る、小さな体験。": "Little moments. A closer connection.",
+  "話してみる": "Start a conversation",
+  "会話のテンポを感じる。": "Find your conversational rhythm.",
+  "一緒に遊ぶ": "Share a little date",
+  "選んで、笑って、思い出に。": "Choose, laugh and make a memory.",
+  "振り返る": "Look back together",
+  "会ったら話したいことが見つかる。": "Find something to talk about when you meet.",
+  "ひとつの会話が、会いたい気持ちに。": "One conversation. A reason to meet.",
   "招待された分身と話す →": "Meet the invited twin →",
   "友達に分身を試してもらう": "Invite a friend to meet your twin",
   "リンクは7日間有効です。友達の会話はあなたに公開されません。分身を更新すると古いリンクは無効になります。": "Links last seven days. Your friend's chats stay private. Updating your twin invalidates old links.",
